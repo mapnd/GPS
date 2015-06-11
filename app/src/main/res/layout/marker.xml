@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/root"
+    android:padding="10dip">
+
+    <ImageView
+        android:id="@+id/marker_animal"
+        android:layout_width="40dip"
+        android:layout_height="90dip"
+        android:layout_margin="10dip"
+        android:layout_gravity="center"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_bear"
+        />
+
+    <ImageView
+        android:id="@+id/marker_accident"
+        android:layout_width="40dip"
+        android:layout_height="140dip"
+        android:layout_margin="10dip"
+        android:layout_gravity="center"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_bear"
+        />
+
+    <ImageView
+        android:id="@+id/marker_police"
+        android:layout_width="40dip"
+        android:layout_height="40dip"
+        android:layout_margin="10dip"
+        android:layout_gravity="center"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_bear"
+        />
+
+    <TextView android:id="@+id/marker_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/marker_accident"
+        />
+</RelativeLayout>

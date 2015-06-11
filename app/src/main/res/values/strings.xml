@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">MapResearch</string>
+    <string name="title_activity_main">Dashboard</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="title_activity_login">Login</string>
+    <string name="search_distance">Search Distance</string>
+    <string name="reports">Reports</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_logout">Logout</string>
+    <string name="settings_distance_format">%d miles</string>
+
+
+
+</resources>

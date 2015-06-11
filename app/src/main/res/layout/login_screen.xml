@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Username:"
+        android:id="@+id/loginTxtUsername"
+        android:layout_alignBottom="@+id/registerDialogEditUsername"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/registerDialogEditUsername"
+        android:layout_alignParentTop="true"
+        android:layout_alignLeft="@+id/registerDialogEditPassword"
+        android:layout_alignStart="@+id/registerDialogEditPassword" />
+
+    <EditText
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:password="true"
+        android:id="@+id/registerDialogEditPassword"
+        android:layout_below="@+id/registerDialogEditUsername"
+        android:layout_toRightOf="@+id/loginTxtPassword"
+        android:layout_toEndOf="@+id/loginTxtPassword" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Password:"
+        android:id="@+id/loginTxtPassword"
+        android:layout_alignBottom="@+id/registerDialogEditPassword"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sign in"
+        android:id="@+id/loginButtonSignin"
+        android:layout_below="@+id/registerDialogEditPassword"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="29dp" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Register"
+        android:id="@+id/loginButtonRegister"
+        android:layout_alignBottom="@+id/loginButtonSignin"
+        android:layout_toRightOf="@+id/loginTxtUsername"
+        android:layout_toEndOf="@+id/loginTxtUsername" />
+
+</RelativeLayout>

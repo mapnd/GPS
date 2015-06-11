@@ -1,0 +1,78 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/LinearLayoutMain"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical"
+    tools:context=".MainActivity" >
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        >
+
+        <Button
+            android:id="@+id/map_directions_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Map Directions"
+            android:layout_alignParentLeft="true" />
+        <Button
+            android:id="@+id/find_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search Location"
+            android:layout_alignParentRight="true" />
+        <EditText
+            android:id="@+id/loc_edit_text"
+            android:layout_width="400dp"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:hint="Enter Location"
+            android:layout_toLeftOf="@id/find_btn"
+            android:layout_toRightOf="@id/map_directions_btn"
+            android:imeOptions="actionDone"/>
+        <Button
+            android:id="@+id/query_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gather Reports"
+            android:layout_alignParentLeft="true"
+            />
+        <Button
+            android:id="@+id/clear_btn"
+            android:layout_centerHorizontal="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear Map"
+            android:layout_toRightOf="@id/query_btn"/>
+
+
+
+    </LinearLayout>
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:id="@+id/tv_distance_time"
+            android:layout_width="700dp"
+            android:layout_height="wrap_content"
+            android:text="  "/>
+
+    </RelativeLayout>
+
+
+
+    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/mapview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        class="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_below = "@+id/auto_comp_tv"/>
+
+</LinearLayout>
