@@ -26,15 +26,14 @@
             android:layout_height="wrap_content"
             android:text="Search Location"
             android:layout_alignParentRight="true" />
-        <EditText
+        <nd.edu.mapresearch.CustomAutocompleteTextView
             android:id="@+id/loc_edit_text"
             android:layout_width="400dp"
-            android:layout_height="wrap_content"
-            android:inputType="text"
-            android:hint="Enter Location"
+            android:layout_height="match_parent"
+            android:ems="10"
+            android:imeOptions="actionDone"
             android:layout_toLeftOf="@id/find_btn"
-            android:layout_toRightOf="@id/map_directions_btn"
-            android:imeOptions="actionDone"/>
+            android:layout_toRightOf="@id/map_directions_btn"/>
         <Button
             android:id="@+id/query_btn"
             android:layout_width="wrap_content"
