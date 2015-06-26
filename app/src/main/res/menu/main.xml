@@ -23,4 +23,11 @@
         MapResearch:showAsAction="never"
         android:title="Clear (DEBUG)"/>
 
+    <item
+        android:id="@+id/gps_off"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Turn Off GPS Mode"/>
+
 </menu>

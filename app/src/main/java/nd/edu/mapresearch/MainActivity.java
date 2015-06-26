@@ -22,6 +22,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.text.Editable;
+import android.text.Html;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -37,6 +38,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Filterable;
 import android.widget.GridView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -70,6 +73,7 @@ import com.parse.ParseQuery;
 import com.parse.SaveCallback;
 
 import org.json.JSONObject;
+import org.w3c.dom.Document;
 import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
@@ -96,21 +100,22 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
 
-    private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+    public  GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private double currentLatitude;//The current latitude of the user
     private double currentLongitude;//The current longitude of the user
     private Marker curSelectedMarker;//when a user clicks on a marker, this is it
     private LatLng currentPositionLagLng;//The current position of the user as a LatLng object
     private boolean markerClicked;//Keeps track if a marker is clicked
     private boolean polyLineDrawn;//Keeps track if a route(polyLine) is drawn
-    private TextView distanceDuration;//This textview displays the distance and duration once a user chooses to map directions
+    public TextView distanceDuration;//This textview displays the distance and duration once a user chooses to map directions
+    public TextView directions;
     private String enteredAddress;//Used for adding the title of the marker placed at a searched location
     private ParseObject userObject;//The object that is used to push a new object to the database
     private String iconOfOnLongClick;//Stores the name of the icon chosen by the user
     private boolean circleOnMap;//Keeps track if a circle around the user is on the map
     private boolean startUp;//Used for starting the map on the current location
     private boolean timerIsRunning;//Keeps track if the timer is running
-    private Polyline mPolyline;//The polyline that is the directions in between markers
+    public Polyline mPolyline;//The polyline that is the directions in between markers
     private boolean dialog_error;
     private String userName;
     private String userID;
@@ -146,6 +151,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private AutoCompleteTextView autoCompleteTextView;
     PlacesTask placesTask;
     ParserTask parserTask;
+
+    private boolean isGPSMode = false;
+    private GPSNavigator navigator;
+    private String idOfMarkerGps = "";
 
     final CharSequence[] eventsPlotted ={"Bear",
             "Buffalo",
@@ -270,6 +279,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         userObject = new ParseObject("PlaceObject");
 
         distanceDuration = (TextView) findViewById(R.id.tv_distance_time);
+        directions = (TextView) findViewById(R.id.MainDirectionsTextView);
 
         Button findButton = (Button)findViewById(R.id.find_btn);//button to execute find location
         Button clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
@@ -364,6 +374,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         visibleMarkers.clear();
         polyLineDrawn = false;
         circleOnMap = false;
+        navigator.stopGPS();
+        isGPSMode = false;
     }
 
 
@@ -408,13 +420,45 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final OnClickListener mapDirClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            //call method to map the polygon
-            if(markerClicked && !polyLineDrawn){//if a marker selected and no directions on map
-                mapDirections(currentPositionLagLng, curSelectedMarker);
-            }else if(markerClicked && polyLineDrawn){//if a marker is selected and directions on map
-                mPolyline.remove();
-                mapDirections(currentPositionLagLng, curSelectedMarker);
+
+            if (isGPSMode) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                TextView text = new TextView(MainActivity.this);
+
+                text.setText("Do you want to stop GPS navigation and trace rout to other marker?");
+                builder.setView(text);
+
+                builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        isGPSMode = false;
+                        navigator.stopGPS();
+                        //call method to map the polygon
+                        if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
+                            mapDirections(currentPositionLagLng, curSelectedMarker);
+                        } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map
+                            mPolyline.remove();
+                            mapDirections(currentPositionLagLng, curSelectedMarker);
+                        }
+                    }
+                });
+
+                builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //Do nothing
+                    }
+                });
+            } else {
+                if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
+                    mapDirections(currentPositionLagLng, curSelectedMarker);
+                } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map
+                    mPolyline.remove();
+                    mapDirections(currentPositionLagLng, curSelectedMarker);
+                }
+
             }
+
         }
     };
 
@@ -472,6 +516,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             builder.setView(view);
             final TextView textview = (TextView)view.findViewById(R.id.markerInfoDialogTextView);
             final TextView votesText = (TextView)view.findViewById(R.id.markerInfoDialogVotesTextview);
+            final TextView minutesText = (TextView)view.findViewById(R.id.markerInfoDialogMinutesExpireTextView);
             final Button upButton = (Button)view.findViewById(R.id.markerInfoDialogButtonUp);
             final Button downButton = (Button)view.findViewById(R.id.markerInfoDialogButtonDown);
             ParseQuery query = ParseQuery.getQuery("PlaceObject");
@@ -559,14 +604,20 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         // Checking to see how many minutes remaining
                         long timeOfCreation = creationDate.getTime();
                         long currentTime = System.currentTimeMillis();
-                        long timeOfExclusion = timeOfCreation + obj.getInt("minutes")*60000;
-                        long difference = timeOfExclusion - currentTime;
+                        long timeOfExpiration = timeOfCreation + obj.getInt("minutes")*60000;
+                        long difference = timeOfExpiration - currentTime;
                         long minutes = difference / 60000;
+                        // If is already expired, display it correctly, if not, display the minutes
+                        if (currentTime > timeOfExpiration) {
+                            minutesText.setText("Minutes until expires: Expired");
+                        } else {
+                            minutesText.setText("Minutes until expires: " + String.valueOf(minutes));
+                        }
+
                         String text = "Group: " + obj.getString("group") + "\n" +
                                 "Notes: " + obj.getString("notes") + "\n" +
                                 "Created by: " + obj.getString("username") + "\n" +
-                                "Created at: " + hourCreated + "\n" +
-                                "Minutes until expires: " + String.valueOf(minutes);
+                                "Created at: " + hourCreated;
                         textview.setText(text);
                         votesText.setText("Votes: " + String.valueOf(obj.getInt("votes")));
 
@@ -587,6 +638,44 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     isDialogOpen = false;
                 }
             });
+
+            builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+
+                    RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                    RadioButton walking = new RadioButton(MainActivity.this);
+                    int walkingId = View.generateViewId();
+                    walking.setId(walkingId);
+                    walking.setText("Walking");
+                    RadioButton driving = new RadioButton(MainActivity.this);
+                    int drivingId = View.generateViewId();
+                    driving.setId(drivingId);
+                    driving.setText("Driving");
+                    radioGroup.addView(walking, 0);
+                    radioGroup.addView(driving, 1);
+
+                    final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
+                    gpsBuilder.setView(radioGroup);
+
+                    gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            int id = radioGroup.getCheckedRadioButtonId();
+                            if (id == walkingId) {
+                                startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
+                            } else {
+                                startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
+                            }
+                        }
+                    });
+
+
+
+                }
+            });
+
+
             builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                 /* Exits the dialog */
                 @Override
@@ -661,6 +750,17 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     }
                 });
                 return true;
+            }
+        });
+
+        menu.findItem(R.id.gps_off).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                navigator.stopGPS();
+                isGPSMode = false;
+                idOfMarkerGps = "";
+                Toast.makeText(MainActivity.this, "GPS Navigation Stopped!", Toast.LENGTH_LONG).show();
+                return false;
             }
         });
         return true;
@@ -1020,6 +1120,39 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 }
             }
         });
+
+        /* GPS Part*/
+        if (isGPSMode) {
+            if (navigator.isGPSReady()) {
+                //Check if we are close to the next destination
+                LatLng nextDest = navigator.getNextDestination();
+                float distance = distanceAtoB((float) currentPositionLagLng.latitude, (float) currentPositionLagLng.longitude, (float) nextDest.latitude, (float) nextDest.longitude);
+                distance *= 1609.34;
+                Log.d("MainActivity", "Distance: " + String.valueOf(distance));
+                if (distance < GPSNavigator.MIN_DISTANCE) {
+                    //Go to next instruction!
+                    if (navigator.isFinalDestination()) {
+                        //Destination Reached!
+                        isGPSMode = false;
+                        idOfMarkerGps = "";
+                        Toast.makeText(MainActivity.this, "You reached your destination!", Toast.LENGTH_LONG).show();
+                        directions.setText("");
+                        distanceDuration.setText("");
+                        //mPolyline.remove(); //maybe vai dar bosta
+                        mPolyline.remove();
+                    } else {
+                        //Change to next destination
+                        navigator.advanceDestination();
+                        directions.setText("Next step: " + Html.fromHtml(navigator.getCurrentDirection()));
+                        distanceDuration.setText("Distance: " + navigator.getCurrentDistance() + ", Duration: " + navigator.getCurrentDurations());
+                        //ver de por polyline
+                        mPolyline.remove();
+                        mPolyline = mMap.addPolyline(navigator.getNextPolyline());
+
+                    }
+                }
+            }
+        }
     }
     /*
     Only called if there are objects from the Parse database.
@@ -1037,19 +1170,23 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         // If the marker dialog is currently opened, we want to see if the marker will still be shown after this update
         // If yes, keep the dialog open. If no, close the dialog and warn the user
         if (isDialogOpen) {
-            // create a list of objects ids
-            ArrayList<String> idsOfMarkers = new ArrayList<String>();
+            boolean markerFound = false;
+            // see if marker is on the list. If not, marker should not be showed anymore
             for (ParseObject obj : objects) {
-                idsOfMarkers.add(obj.getObjectId());
+                if (obj.getObjectId().equals(idOfMarkerBeingShown)) {
+                    updateMarkerDialog(markerDialog, obj);
+                    markerFound = true;
+                    break;
+                }
             }
-            // see if marker is on the list
-            if (!idsOfMarkers.contains(idOfMarkerBeingShown)) {
+
+            if (!markerFound) {
                 markerDialog.dismiss();
                 isDialogOpen = false;
                 Toast.makeText(getBaseContext(), "Marker was deleted!", Toast.LENGTH_LONG).show();
             }
-
         }
+
 
         for(int i = 0; i < objects.size(); i++){
             //Let us check if ther marker should be deleted first!
@@ -1065,8 +1202,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
             long timeOfCreation = creationDate.getTime();
             long currentTime = System.currentTimeMillis();
-            long timeOfExclusion = timeOfCreation + objects.get(i).getInt("minutes")*60000;
-            if (currentTime >= timeOfExclusion) {
+            long timeOfExpiration = timeOfCreation + objects.get(i).getInt("minutes")*60000;
+            long timeOfExclusion = timeOfExpiration + 10 * 60000; //add 10 minutes after expiration
+            if (currentTime >= timeOfExclusion && !objects.get(i).getObjectId().equals(idOfMarkerGps)) {
+                //delete if it is past the time and if it is not the marker being traveled to
                 objects.get(i).deleteEventually();
                 continue;
             }
@@ -1431,7 +1570,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
             // Building the url to the web service
             String url = "https://maps.googleapis.com/maps/api/place/autocomplete/"+output+"?"+parameters;
-            Log.d("MainActivity", url);
 
             try{
                 // Fetching the data from we service
@@ -1490,8 +1628,50 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             SimpleAdapter adapter = new SimpleAdapter(getBaseContext(), result, android.R.layout.simple_list_item_1, from, to);
 
             // Setting the adapter
-            Log.d("MainActivity", "Setting up adapter");
             autoCompleteTextView.setAdapter(adapter);
         }
+    }
+
+    private void updateMarkerDialog (AlertDialog dialog, ParseObject obj) {
+        TextView minutesText = (TextView)dialog.findViewById(R.id.markerInfoDialogMinutesExpireTextView);
+
+        Date creationDate = obj.getCreatedAt();
+        Calendar calendar = GregorianCalendar.getInstance();
+        calendar.setTime(creationDate);
+        long timeOfCreation = creationDate.getTime();
+        long currentTime = System.currentTimeMillis();
+        long timeOfExpiration = timeOfCreation + obj.getInt("minutes")*60000;
+        long difference = timeOfExpiration - currentTime;
+        long minutes = difference / 60000;
+
+        if (currentTime > timeOfExpiration) {
+            minutesText.setText("Minutes until expires: Expired");
+        } else {
+            minutesText.setText("Minutes until expires: " + String.valueOf(minutes));
+        }
+
+    }
+
+    private void startGPSNavigation(Marker marker, String mode) {
+        isGPSMode = true;
+        idOfMarkerGps = marker.getTitle();
+        LatLng start = currentPositionLagLng;
+        LatLng end = marker.getPosition();
+        navigator = new GPSNavigator(start, end, mode, MainActivity.this);
+
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+
+        MenuItem itm = menu.findItem(R.id.gps_off);
+
+        if (!isGPSMode) {
+            itm.setVisible(false);
+        } else {
+            itm.setVisible(true);
+        }
+        return true;
     }
 }
