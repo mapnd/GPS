@@ -376,6 +376,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         circleOnMap = false;
         navigator.stopGPS();
         isGPSMode = false;
+        idOfMarkerGps = "";
     }
 
 
@@ -433,6 +434,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     public void onClick(DialogInterface dialog, int which) {
                         isGPSMode = false;
                         navigator.stopGPS();
+                        idOfMarkerGps = "";
                         //call method to map the polygon
                         if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
                             mapDirections(currentPositionLagLng, curSelectedMarker);
@@ -1136,10 +1138,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         isGPSMode = false;
                         idOfMarkerGps = "";
                         Toast.makeText(MainActivity.this, "You reached your destination!", Toast.LENGTH_LONG).show();
-                        directions.setText("");
-                        distanceDuration.setText("");
-                        //mPolyline.remove(); //maybe vai dar bosta
-                        mPolyline.remove();
+                        navigator.stopGPS();
                     } else {
                         //Change to next destination
                         navigator.advanceDestination();
