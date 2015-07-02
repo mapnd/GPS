@@ -374,7 +374,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         visibleMarkers.clear();
         polyLineDrawn = false;
         circleOnMap = false;
-        navigator.stopGPS();
+        if (isGPSMode) {
+            isGPSMode = false;
+            navigator.stopGPS();
+        }
         isGPSMode = false;
         idOfMarkerGps = "";
     }
@@ -451,6 +454,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         //Do nothing
                     }
                 });
+                builder.show();
             } else {
                 if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
                     mapDirections(currentPositionLagLng, curSelectedMarker);
@@ -645,9 +649,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
 
-                    RadioGroup radioGroup = new RadioGroup(MainActivity.this);
-                    RadioButton walking = new RadioButton(MainActivity.this);
-                    int walkingId = View.generateViewId();
+                    final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                    final RadioButton walking = new RadioButton(MainActivity.this);
+                    final int walkingId = View.generateViewId();
                     walking.setId(walkingId);
                     walking.setText("Walking");
                     RadioButton driving = new RadioButton(MainActivity.this);
@@ -671,8 +675,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                             }
                         }
                     });
-
-
+                    gpsBuilder.show();
 
                 }
             });
@@ -1653,6 +1656,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
     private void startGPSNavigation(Marker marker, String mode) {
         isGPSMode = true;
+        if(polyLineDrawn) {
+            mPolyline.remove();
+        }
         idOfMarkerGps = marker.getTitle();
         LatLng start = currentPositionLagLng;
         LatLng end = marker.getPosition();

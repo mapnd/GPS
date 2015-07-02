@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by JoãoGuilherme on 6/21/2015.
+ * Created by JoaoGuilherme on 6/21/2015.
  */
 public class GPSNavigator {
     public static final String DRIVING_MODE = "driving";
