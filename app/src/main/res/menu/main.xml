@@ -30,4 +30,18 @@
         MapResearch:showAsAction="never"
         android:title="Turn Off GPS Mode"/>
 
+    <item
+        android:id="@+id/write_message"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Send message"/>
+
+    <item
+        android:id="@+id/read_message"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Read message"/>
+
 </menu>

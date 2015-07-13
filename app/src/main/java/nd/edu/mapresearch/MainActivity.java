@@ -7,6 +7,7 @@ package nd.edu.mapresearch;
 
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -32,14 +33,17 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Filterable;
 import android.widget.GridView;
+import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -156,6 +160,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private GPSNavigator navigator;
     private String idOfMarkerGps = "";
 
+    private int newMessages = 0;
+
     final CharSequence[] eventsPlotted ={"Bear",
             "Buffalo",
             "Deer",
@@ -229,6 +235,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setUpMapIfNeeded();
+
+        newMessages = -1;
 
         Toast.makeText(MainActivity.this, "USER: " + getIntent().getStringExtra(LoginActivity.USERNAME), Toast.LENGTH_LONG).show();
         userName = getIntent().getStringExtra(LoginActivity.USERNAME);
@@ -504,7 +512,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final OnClickListener clearClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            distanceDuration.setText("  ");//clears distanceDuration Text
+            distanceDuration.setText("");//clears distanceDuration Text
             clearMap();
         }
     };
@@ -768,7 +776,191 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 return false;
             }
         });
+
+        menu.findItem(R.id.read_message).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+
+                final ListView lv = new ListView(MainActivity.this);
+                ParseQuery<ParseObject> query = ParseQuery.getQuery("MessageData");
+                query.whereEqualTo("receiver", userName);
+                query.setLimit(50);
+                final ProgressDialog pg = new ProgressDialog(MainActivity.this);
+                pg.setMessage("Getting messages...");
+                query.findInBackground(new FindCallback<ParseObject>() {
+                    @Override
+                    public void done(List<ParseObject> list, ParseException e) {
+                        if (e == null) {
+                            pg.dismiss();
+                            ArrayList<ParseObject> objs = new ArrayList<ParseObject>(list);
+                            final MessageAdapter adapter = new MessageAdapter(objs, MainActivity.this);
+                            lv.setAdapter(adapter);
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                            builder.setTitle("Your messages");
+                            builder.setView(lv);
+                            builder.setPositiveButton("Done", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    //Do nothing
+                                }
+                            });
+                            final AlertDialog readMessageDialog = builder.show();
+
+                            lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+                                @Override
+                                public void onItemClick(AdapterView<?> parent, android.view.View view,
+                                                        int position, long id) {
+                                    readMessageDialog.dismiss();
+                                    final ParseObject obj = adapter.getItem(position);
+                                    String message = obj.getString("text");
+                                    TextView tv = new TextView(MainActivity.this);
+                                    tv.setText(message);
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                    builder.setView(tv);
+                                    //Ok Button
+                                    builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            //Do nothing
+                                            obj.put("read", true);
+                                            obj.saveEventually();
+                                        }
+                                    });
+                                    //Delete message
+                                    builder.setNegativeButton("Delete", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            obj.deleteEventually();
+                                        }
+                                    });
+
+                                    //Reply message
+                                    builder.setNeutralButton("Reply", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            obj.put("read", true);
+                                            obj.saveEventually();
+                                            writeMessage(obj.getString("sender"));
+                                        }
+                                    });
+                                    builder.show();
+                                }
+
+                            });
+
+                        } else {
+                            pg.dismiss();
+                            Toast.makeText(MainActivity.this, "Could not get messages", Toast.LENGTH_LONG).show();
+                            Log.d("MessageDialog", e.getMessage());
+                        }
+                    }
+                });
+                return false;
+            }
+        });
+
+        menu.findItem(R.id.write_message).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                writeMessage("");
+                return false;
+
+            }
+        });
         return true;
+    }
+
+    private void writeMessage(String receiver) {
+        //Make dialog appear
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        View layout = getLayoutInflater().inflate(R.layout.message_dialog, null);
+        builder.setView(layout);
+        final EditText receiverET = (EditText)layout.findViewById(R.id.MessageDialogToEditText);
+        final EditText messageET = (EditText)layout.findViewById(R.id.MessageDialogMessageEditText);
+
+        receiverET.setText(receiver);
+        builder.setPositiveButton("Send", null);
+        builder.setNegativeButton("Cancel", null);
+
+        final AlertDialog dialog = builder.create();
+
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+
+            @Override
+            public void onShow(DialogInterface dialog2) {
+                Button b = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                b.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //Check if sender and message are written
+                        final String receiver = receiverET.getText().toString().trim();
+                        final String message = messageET.getText().toString().trim();
+
+                        if (receiver.equals("") || message.equals("")) {
+                            Toast.makeText(MainActivity.this, "Data missing!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        //Try to send, make progress dialog appear
+                        final ProgressDialog pg = new ProgressDialog(MainActivity.this);
+                        pg.setMessage("Sending message...");
+                        pg.show();
+
+                        //Check if receiver exists
+                        ParseQuery<ParseObject> query = ParseQuery.getQuery("UserData");
+                        query.whereEqualTo(LoginActivity.USERNAME, receiver);
+                        query.findInBackground(new FindCallback<ParseObject>() {
+                            @Override
+                            public void done(List<ParseObject> list, ParseException e) {
+                                if (e == null) {
+                                    if (list.size() == 0) {
+                                        //Deu merda
+                                        pg.dismiss();
+                                        Toast.makeText(MainActivity.this, "No username found!", Toast.LENGTH_LONG).show();
+                                    } else {
+                                        //Send message
+                                        ParseObject newMessage = new ParseObject("MessageData");
+                                        newMessage.put("sender", userName);
+                                        newMessage.put("receiver", receiver);
+                                        newMessage.put("text", message);
+                                        newMessage.put("read", false);
+                                        newMessage.saveInBackground(new SaveCallback() {
+                                            @Override
+                                            public void done(ParseException e) {
+                                                pg.dismiss();
+                                                dialog.dismiss();
+                                                if (e == null) {
+                                                    Toast.makeText(MainActivity.this, "Message sent!", Toast.LENGTH_LONG).show();
+                                                } else {
+                                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
+                                                }
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    pg.dismiss();
+                                    dialog.dismiss();
+                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
+                                    Log.d("MessageDialog", e.getMessage());
+                                }
+                            }
+                        });
+
+                    }
+                });
+
+                b = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+                b.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+            }
+        });
+
+        dialog.show();
     }
 
 
@@ -809,7 +1001,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         }
                     });
                     final AlertDialog disDialog = builder.show();
-                    gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    gridView.setOnItemClickListener(new OnItemClickListener() {
 
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view,
@@ -879,7 +1071,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     }
                 });
         final AlertDialog disDialog = builder.show();
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        gridView.setOnItemClickListener(new OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -925,7 +1117,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     }
                 });
         final AlertDialog disDialog = builder.show();
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        gridView.setOnItemClickListener(new OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -970,7 +1162,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     }
                 });
         final AlertDialog disDialog = builder.show();
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        gridView.setOnItemClickListener(new OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -1122,6 +1314,23 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     objectsWereRetrievedSuccessfully(objects);
                 } else {
                     Toast.makeText(getBaseContext(), "objectRetrievalFailed!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        /* check if there are new messages */
+        ParseQuery<ParseObject> messageQuery = ParseQuery.getQuery("MessageData");
+        messageQuery.whereEqualTo("receiver", userName);
+        messageQuery.whereEqualTo("read", false);
+
+        messageQuery.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> list, ParseException e) {
+                if (e == null) {
+                    if (newMessages < list.size() && list.size() > 0) {
+                        Toast.makeText(MainActivity.this, "You have new messages!", Toast.LENGTH_LONG).show();
+                    }
+                    newMessages = list.size();
                 }
             }
         });
