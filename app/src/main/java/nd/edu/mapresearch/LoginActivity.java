@@ -33,11 +33,6 @@ public class LoginActivity extends Activity {
     private Button register; //register button
 
 
-    // Constants used to store and get information from parse
-    public static final String USERNAME = "username";
-    public static final String PASSWORD_HASH = "passwordhash";
-    public static final String USER_ID = "id";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Basic setup
@@ -59,17 +54,17 @@ public class LoginActivity extends Activity {
         final SharedPreferences settings = getSharedPreferences("Choice", MODE_PRIVATE);
         final SharedPreferences.Editor editor = settings.edit();
         // Getting previous username and hashed password
-        final String previousUsername = settings.getString("PreviousUsername", "");
-        final String previousPasswordHash = settings.getString("PreviousPasswordHash", "");
-        final String previousUserID = settings.getString("PreviousUserID", "");
+        final String previousUsername = settings.getString(Utils.EDITOR_PREVIOUS_USERNAME, "");
+        final String previousPasswordHash = settings.getString(Utils.EDITOR_PREVIOUS_PASSWORD_HASH, "");
+        final String previousUserID = settings.getString(Utils.EDITOR_PREVIOUS_USER_ID, "");
 
         if (!previousUserID.equals("")) {
-            ParseQuery<ParseObject> query = ParseQuery.getQuery("UserData");
+            ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.USER_DATA);
             query.getInBackground(previousUserID, new GetCallback<ParseObject>() {
                 @Override
                 public void done(ParseObject user, ParseException e) {
                     if (e == null) {
-                        if (previousUsername.equals(user.getString(USERNAME)) && previousPasswordHash.equals(user.getString(PASSWORD_HASH))) {
+                        if (previousUsername.equals(user.getString(Utils.USER_DATA_USERNAME)) && previousPasswordHash.equals(user.getString(Utils.USER_DATA_PASSWORD_HASH))) {
                             finish();
                             startActivity(createIntentWithUserData(user));
                         }
@@ -120,7 +115,7 @@ public class LoginActivity extends Activity {
 
             }
             Log.d("LoginAcitivity", "Starting query!");
-            ParseQuery<ParseObject> query = ParseQuery.getQuery("UserData");
+            ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.USER_DATA);
             query.findInBackground(new FindCallback<ParseObject>() {
                 public void done(List<ParseObject> objects, ParseException e) {
                     if (e == null) {
@@ -130,11 +125,11 @@ public class LoginActivity extends Activity {
                             return;
                         }
                         for (ParseObject user : objects) {
-                            if (userString.equals(user.getString(USERNAME))) { // if we find the username in the DB
+                            if (userString.equals(user.getString(Utils.USER_DATA_USERNAME))) { // if we find the username in the DB
                                 Log.d("LoginAcitivity", "Found a match!");
-                                if (BCrypt.checkpw(pass, user.getString(PASSWORD_HASH))) { // check if password matches hash
+                                if (BCrypt.checkpw(pass, user.getString(Utils.USER_DATA_PASSWORD_HASH))) { // check if password matches hash
                                     //Login!
-                                    saveInfo(userString, user.getString(PASSWORD_HASH), user.getObjectId());
+                                    saveInfo(userString, user.getString(Utils.USER_DATA_PASSWORD_HASH), user.getObjectId());
                                     finish();
                                     startActivity(createIntentWithUserData(user));
                                 } else {
@@ -189,14 +184,14 @@ public class LoginActivity extends Activity {
                     } else {
                         // We have to check if the username is already taken!
                         Log.d("LoginAcitivity", "Doing query!");
-                        ParseQuery<ParseObject> query = ParseQuery.getQuery("UserData");
+                        ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.USER_DATA);
                         query.findInBackground(new FindCallback<ParseObject>() {
                             public void done(List<ParseObject> objects, ParseException e) {
                                 if (e == null) {
                                     Log.d("LoginAcitivity", "Query done!");
                                     if (objects.size() != 0) {
                                         for (ParseObject userObject : objects) {
-                                            if (userInput.equals(userObject.getString(USERNAME))) {
+                                            if (userInput.equals(userObject.getString(Utils.USER_DATA_USERNAME))) {
                                                 Toast.makeText(getBaseContext(), "Username already being used!", Toast.LENGTH_SHORT).show();
                                                 return;
                                             }
@@ -205,10 +200,10 @@ public class LoginActivity extends Activity {
                                     // If not taken, insert into Parse database
                                     Log.d("LoginAcitivity", "Inserting into database!");
                                     final ParseObject newUser = new ParseObject("UserData");
-                                    newUser.put(USERNAME, userInput);
+                                    newUser.put(Utils.USER_DATA_USERNAME, userInput);
                                     // We have to hash the password to make it safer to store it
                                     final String hashed = BCrypt.hashpw(pass, BCrypt.gensalt());
-                                    newUser.put(PASSWORD_HASH, hashed);
+                                    newUser.put(Utils.USER_DATA_PASSWORD_HASH, hashed);
                                     Log.d("LoginAcitivity", "Storing: " + userInput + " and " + hashed);
                                     newUser.saveInBackground(new SaveCallback() {
                                         public void done(ParseException e) {
@@ -253,8 +248,8 @@ public class LoginActivity extends Activity {
     // Method to easily create an intent to MainActivity passing on user data of the user logged in
     private Intent createIntentWithUserData(ParseObject user) {
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.putExtra(USERNAME, user.getString(USERNAME));
-        intent.putExtra(USER_ID, user.getObjectId());
+        intent.putExtra(Utils.USER_DATA_USERNAME, user.getString(Utils.USER_DATA_USERNAME));
+        intent.putExtra(Utils.USER_DATA_USER_ID, user.getObjectId());
         return intent;
     }
 
@@ -264,9 +259,9 @@ public class LoginActivity extends Activity {
         final SharedPreferences settings = getSharedPreferences("Choice", MODE_PRIVATE);
         final SharedPreferences.Editor editor = settings.edit();
 
-        editor.putString("PreviousUsername", username);
-        editor.putString("PreviousPasswordHash", passwordHash);
-        editor.putString("PreviousUserID", userID);
+        editor.putString(Utils.EDITOR_PREVIOUS_USERNAME, username);
+        editor.putString(Utils.EDITOR_PREVIOUS_PASSWORD_HASH, passwordHash);
+        editor.putString(Utils.EDITOR_PREVIOUS_USER_ID, userID);
 
         editor.commit();
     }

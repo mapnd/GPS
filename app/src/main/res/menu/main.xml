@@ -44,4 +44,25 @@
         MapResearch:showAsAction="never"
         android:title="Read message"/>
 
+    <item
+        android:id="@+id/show_list"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Show markers list"/>
+
+    <item
+        android:id="@+id/delete_expired"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Delete expired"/>
+
+    <item
+        android:id="@+id/hide_list"
+        android:orderInCategory="100"
+        android:visible="true"
+        MapResearch:showAsAction="never"
+        android:title="Hide markers list"/>
+
 </menu>

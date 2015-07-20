@@ -7,23 +7,23 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.parse.Parse;
 import com.parse.ParseObject;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 /**
- * Created by JoaoGuilherme on 7/4/2015.
+ * Created by JoaoGuilherme on 7/16/2015.
  */
-public class MessageAdapter extends BaseAdapter {
+public class MarkerListAdapter extends BaseAdapter{
 
-    private ArrayList<ParseObject> list;
+    private List<ParseObject> list;
     private Context ctx;
 
-    public MessageAdapter(ArrayList<ParseObject> list, Context ctx) {
+    public MarkerListAdapter(List<ParseObject> list, Context ctx) {
         this.list = list;
         this.ctx = ctx;
     }
@@ -87,22 +87,12 @@ public class MessageAdapter extends BaseAdapter {
             ParseObject obj = list.get(position);
 
             String display = "";
-            display = "From: " + obj.getString(Utils.MESSAGE_DATA_SENDER) + ", ";
-            display += "At: " + converDateToDateString(obj.getCreatedAt());
-            String message = obj.getString(Utils.MESSAGE_DATA_TEXT);
+            String notes = obj.getString("notes");
+            String group = obj.getString("group");
+            String creator = obj.getString("username");
 
-            boolean isRead = obj.getBoolean(Utils.MESSAGE_DATA_READ);
-            if (isRead) {
-                display+= ", Read!";
-            } else {
-                display += ", Not read!";
-            }
-            String trimmedMessage = message.substring(0, Math.min(message.length(), 10)); //get first 10 characters
-            display += "\nPreview: " + trimmedMessage;
+            display = "Group: " + group + ", created by: " + creator + "\n" + "Notes: " + notes;
             holder.text.setText(display);
-
-            //vi.setOnClickListener(new OnItemClickListener( position ));
-            //Put onClickListener to display Message
         }
         return vi;
     }
