@@ -917,11 +917,24 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         if (e == null) {
                             //Sort this list by distance
                             Collections.sort(list, new MarkerComparator(currentPositionLagLng));
-                            listView.setAdapter(new MarkerListAdapter(list, MainActivity.this));
+                            final MarkerListAdapter markerAdap = new MarkerListAdapter(list, MainActivity.this);
+                            listView.setAdapter(markerAdap);
                             Log.d("MainActivity", String.valueOf(list.size()));
+
+                            listView.setOnItemClickListener(new OnItemClickListener() {
+                                @Override
+                                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                    ParseObject obj = markerAdap.getItem(position);
+                                    ParseGeoPoint coord = obj.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION);
+                                    LatLng latLng = new LatLng(coord.getLatitude(), coord.getLongitude());
+                                    mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                                }
+                            });
                         }
                     }
                 });
+
+
 
                 return false;
             }
