@@ -184,71 +184,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
     private ListView listView;//marker listview
 
-    final CharSequence[] eventsPlotted ={"Bear",
-            "Buffalo",
-            "Deer",
-            "Police",
-            "Major Accident",
-            "Minor Accident",
-            "Construction",
-            "Traffic",
-            "Building",
-            "Tire",
-            "Rain",
-            "Truck Stopped"
-    };
-
-    private String[] reportDialog = {
-            "Animals",
-            "Road Obstacles",
-            "Police"
-    };
-
-    private int[] imageID = {
-            R.mipmap.bear,
-            R.mipmap.roadopstical,
-            R.mipmap.police
-    };
-
-    private String[] animalDialog = {
-            "Bear",
-            "Buffalo",
-            "Deer"
-    };
-
-    private int[] animalImageID = {
-            R.mipmap.bear,
-            R.mipmap.buffalo,
-            R.mipmap.deer
-    };
-
-    private String[] roadObstacleDialog = {
-            "Construction",
-            "Major Accident",
-            "Minor Accident",
-            "Tire",
-            "Traffic",
-            "Truck Stopped"
-    };
-
-    private int[] roadObstacleImageID = {
-            R.mipmap.construction,
-            R.mipmap.majoraccident,
-            R.mipmap.minoraccident,
-            R.mipmap.roadopstical,
-            R.mipmap.traffic,
-            R.mipmap.truckstopped
-    };
-
-    private String[] policeDialog = {
-            "Police"
-    };
-    //Radar maybe
-    private int[] policeImageID = {
-            R.mipmap.police
-    };
-
-
     //////////////////////////////
     //Section A
     //////////////////////////////
@@ -1024,7 +959,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 }else{
                     GridView gridView;
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                    CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, reportDialog, imageID);
+                    CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.reportDialog, Utils.imageID);
                     gridView=new GridView(MainActivity.this);
                     gridView.setAdapter(adapter);
                     builder.setView(gridView);
@@ -1042,14 +977,14 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view,
                                                 int position, long id) {
-                            Toast.makeText(MainActivity.this, "You Clicked at " + reportDialog[+position], Toast.LENGTH_SHORT).show();
-                            if(reportDialog[+position].equals("Animals")){
+                            Toast.makeText(MainActivity.this, "You Clicked at " + Utils.reportDialog[+position], Toast.LENGTH_SHORT).show();
+                            if(Utils.reportDialog[+position].equals("Animals")){
                                 startAnimalDialog(a);
                                 disDialog.dismiss();
-                            }else if(reportDialog[+position].equals("Road Obstacles")){
+                            }else if(Utils.reportDialog[+position].equals("Road Obstacles")){
                                 startRoadObstaclesDialog(a);
                                 disDialog.dismiss();
-                            }else if(reportDialog[+position].equals("Police")){
+                            }else if(Utils.reportDialog[+position].equals("Police")){
                                 startPoliceDialog(a);
                                 disDialog.dismiss();
                             }
@@ -1070,7 +1005,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private void startAnimalDialog(final LatLng a){
         GridView gridView;
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, animalDialog, animalImageID);
+        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.animalDialog, Utils.animalImageID);
         gridView=new GridView(this);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
@@ -1090,10 +1025,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 MarkerOptions marker = new MarkerOptions().position(a).title("Animals");
-                for(int i = 0; i < eventsPlotted.length;i++){
-                    if(animalDialog[+position].equals(eventsPlotted[i])){
-                        iconOfOnLongClick = eventsPlotted[i].toString();
-                        String mDrawName = eventsPlotted[i].toString().toLowerCase();
+                for(int i = 0; i < Utils.eventsPlotted.length;i++){
+                    if(Utils.animalDialog[+position].equals(Utils.eventsPlotted[i])){
+                        iconOfOnLongClick = Utils.eventsPlotted[i].toString();
+                        String mDrawName = Utils.eventsPlotted[i].toString().toLowerCase();
                         mDrawName = mDrawName.replaceAll("\\s","");
                         int resId = getResources().getIdentifier(mDrawName , "mipmap", getPackageName());
                         marker.icon(BitmapDescriptorFactory.fromResource(resId));
@@ -1116,7 +1051,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private void startRoadObstaclesDialog(final LatLng a){
         GridView gridView;
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, roadObstacleDialog, roadObstacleImageID);
+        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.roadObstacleDialog, Utils.roadObstacleImageID);
         gridView=new GridView(this);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
@@ -1136,10 +1071,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 MarkerOptions marker = new MarkerOptions().position(a).title("Road Obstacles");
-                for (int i = 0; i < eventsPlotted.length; i++) {
-                    if (roadObstacleDialog[+position].equals(eventsPlotted[i])) {
-                        iconOfOnLongClick = eventsPlotted[i].toString();
-                        String mDrawName = eventsPlotted[i].toString().toLowerCase();
+                for (int i = 0; i < Utils.eventsPlotted.length; i++) {
+                    if (Utils.roadObstacleDialog[+position].equals(Utils.eventsPlotted[i])) {
+                        iconOfOnLongClick = Utils.eventsPlotted[i].toString();
+                        String mDrawName = Utils.eventsPlotted[i].toString().toLowerCase();
                         mDrawName = mDrawName.replaceAll("\\s", "");
                         int resId = getResources().getIdentifier(mDrawName, "mipmap", getPackageName());
                         marker.icon(BitmapDescriptorFactory.fromResource(resId));
@@ -1161,7 +1096,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private void startPoliceDialog(final LatLng a){
         GridView gridView;
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, policeDialog, policeImageID);
+        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.policeDialog, Utils.policeImageID);
         gridView=new GridView(this);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
@@ -1181,10 +1116,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 MarkerOptions marker = new MarkerOptions().position(a).title("Police");
-                for (int i = 0; i < eventsPlotted.length; i++) {
-                    if (policeDialog[+position].equals(eventsPlotted[i])) {
-                        iconOfOnLongClick = eventsPlotted[i].toString();
-                        String mDrawName = eventsPlotted[i].toString().toLowerCase();
+                for (int i = 0; i < Utils.eventsPlotted.length; i++) {
+                    if (Utils.policeDialog[+position].equals(Utils.eventsPlotted[i])) {
+                        iconOfOnLongClick = Utils.eventsPlotted[i].toString();
+                        String mDrawName = Utils.eventsPlotted[i].toString().toLowerCase();
                         mDrawName = mDrawName.replaceAll("\\s", "");
                         int resId = getResources().getIdentifier(mDrawName, "mipmap", getPackageName());
                         marker.icon(BitmapDescriptorFactory.fromResource(resId));
@@ -1932,9 +1867,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             MarkerOptions nearObject = new MarkerOptions().position(new LatLng(event.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION).getLatitude(),
                     event.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION).getLongitude()));
             String icon = event.getString(Utils.PLACE_OBJECT_ICON);
-            for(int j = 0; j < eventsPlotted.length;j++){
-                if(icon.equals(eventsPlotted[j])){
-                    String mDrawName = eventsPlotted[j].toString().toLowerCase();
+            for(int j = 0; j < Utils.eventsPlotted.length;j++){
+                if(icon.equals(Utils.eventsPlotted[j])){
+                    String mDrawName = Utils.eventsPlotted[j].toString().toLowerCase();
                     mDrawName = mDrawName.replaceAll("\\s","");
                     int resId = getResources().getIdentifier(mDrawName , "mipmap", getPackageName());
                     nearObject.icon(BitmapDescriptorFactory.fromResource(resId));
@@ -1943,8 +1878,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             String title = event.getObjectId();//MODIFIED!
             nearObject.title(title);
             if(animalReports){
-                for(int k = 0; k < animalDialog.length; k++){
-                    if(icon.equals(animalDialog[k])){
+                for(int k = 0; k < Utils.animalDialog.length; k++){
+                    if(icon.equals(Utils.animalDialog[k])){
                         Marker temp = mMap.addMarker(nearObject);
                         //Put marker on hashmap for later access
                         visibleMarkers.put(event.getObjectId(), temp);
@@ -1952,16 +1887,16 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 }
             }
             if(roadObsReports){
-                for(int k = 0; k < roadObstacleDialog.length; k++){
-                    if(icon.equals(roadObstacleDialog[k])){
+                for(int k = 0; k < Utils.roadObstacleDialog.length; k++){
+                    if(icon.equals(Utils.roadObstacleDialog[k])){
                         Marker temp = mMap.addMarker(nearObject);
                         visibleMarkers.put(event.getObjectId(), temp);
                     }
                 }
             }
             if(policeReports){
-                for(int k = 0; k < policeDialog.length; k++){
-                    if(icon.equals(policeDialog[k])){
+                for(int k = 0; k < Utils.policeDialog.length; k++){
+                    if(icon.equals(Utils.policeDialog[k])){
                         Marker temp = mMap.addMarker(nearObject);
                         visibleMarkers.put(event.getObjectId(), temp);
                     }

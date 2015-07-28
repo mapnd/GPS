@@ -38,6 +38,70 @@ public class Utils {
     public static final String EDITOR_PREVIOUS_PASSWORD_HASH = "PreviousPasswordHash"; // String with password hash of last logged in user
     public static final String EDITOR_PREVIOUS_USER_ID = "PreviousUserID"; // String of ID of last logged in user
 
+    final static CharSequence[] eventsPlotted ={"Bear",
+            "Buffalo",
+            "Deer",
+            "Police",
+            "Major Accident",
+            "Minor Accident",
+            "Construction",
+            "Traffic",
+            "Building",
+            "Tire",
+            "Rain",
+            "Truck Stopped"
+    };
+
+    public static String[] reportDialog = {
+            "Animals",
+            "Road Obstacles",
+            "Police"
+    };
+
+    public static int[] imageID = {
+            R.mipmap.bear,
+            R.mipmap.roadopstical,
+            R.mipmap.police
+    };
+
+    public static String[] animalDialog = {
+            "Bear",
+            "Buffalo",
+            "Deer"
+    };
+
+    public static int[] animalImageID = {
+            R.mipmap.bear,
+            R.mipmap.buffalo,
+            R.mipmap.deer
+    };
+
+    public static String[] roadObstacleDialog = {
+            "Construction",
+            "Major Accident",
+            "Minor Accident",
+            "Tire",
+            "Traffic",
+            "Truck Stopped"
+    };
+
+    public static int[] roadObstacleImageID = {
+            R.mipmap.construction,
+            R.mipmap.majoraccident,
+            R.mipmap.minoraccident,
+            R.mipmap.roadopstical,
+            R.mipmap.traffic,
+            R.mipmap.truckstopped
+    };
+
+    public static String[] policeDialog = {
+            "Police"
+    };
+    //Radar maybe
+    public static int[] policeImageID = {
+            R.mipmap.police
+    };
+
     /*
     Takes coordinates a and b and calculates the disntance between them
     Slightly modified from:

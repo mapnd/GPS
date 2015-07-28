@@ -5,8 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.parse.ParseObject;
 
 import java.util.ArrayList;
@@ -53,6 +55,7 @@ public class MarkerListAdapter extends BaseAdapter{
     public static class ViewHolder{
 
         public TextView text;
+        public ImageView image;
 
     }
     @Override
@@ -66,12 +69,13 @@ public class MarkerListAdapter extends BaseAdapter{
             //TextView tv = new TextView(ctx);
             //1vi = ctx.getSystemService(Context.LAYOUT_INFLATER_SERVICE).
 
-            vi = li.inflate(R.layout.read_message_list_item, null);
+            vi = li.inflate(R.layout.marker_list_item, null);
 
             /****** View Holder Object to contain tabitem.xml file elements ******/
 
             holder = new ViewHolder();
-            holder.text = (TextView)vi.findViewById(R.id.ReadMessageItemTV);
+            holder.text = (TextView)vi.findViewById(R.id.markerListItemTV);
+            holder.image = (ImageView)vi.findViewById(R.id.markerListItemIV);
 
             /************  Set holder with LayoutInflater ************/
             vi.setTag( holder );
@@ -88,12 +92,23 @@ public class MarkerListAdapter extends BaseAdapter{
             ParseObject obj = list.get(position);
 
             String display = "";
-            String notes = obj.getString("notes");
-            String group = obj.getString("group");
-            String creator = obj.getString("username");
+            String notes = obj.getString(Utils.PLACE_OBJECT_NOTES);
+            String group = obj.getString(Utils.PLACE_OBJECT_GROUP);
+            String creator = obj.getString(Utils.PLACE_OBJECT_USERNAME);
 
             display = "Group: " + group + ", created by: " + creator + "\n" + "Notes: " + notes;
             holder.text.setText(display);
+
+            String icon = obj.getString(Utils.PLACE_OBJECT_ICON);
+            for(int j = 0; j < Utils.eventsPlotted.length;j++){
+                if(icon.equals(Utils.eventsPlotted[j])){
+                    String mDrawName = Utils.eventsPlotted[j].toString().toLowerCase();
+                    mDrawName = mDrawName.replaceAll("\\s","");
+                    int resId = ctx.getResources().getIdentifier(mDrawName , "mipmap", ctx.getPackageName());
+                    holder.image.setImageResource(resId);
+                    //nearObject.icon(BitmapDescriptorFactory.fromResource(resId));
+                }
+            }
         }
         return vi;
     }
