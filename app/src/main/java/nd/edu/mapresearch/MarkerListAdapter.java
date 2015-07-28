@@ -17,6 +17,7 @@ import java.util.List;
 
 /**
  * Created by JoaoGuilherme on 7/16/2015.
+ * Adapter used by the Marker Listview
  */
 public class MarkerListAdapter extends BaseAdapter{
 

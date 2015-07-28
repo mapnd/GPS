@@ -24,6 +24,7 @@ import java.util.List;
 
 /**
  * Created by JoaoGuilherme on 5/27/2015.
+ * Activity that makes the user login
  */
 public class LoginActivity extends Activity {
     // View elements
@@ -74,28 +75,6 @@ public class LoginActivity extends Activity {
                 }
             });
         }
-
-        /*if (!previousUsername.equals("")) { //if username is not blank, then try to login
-            //DO automatic login!
-            ParseQuery<ParseObject> query = ParseQuery.getQuery("UserData");
-            query.findInBackground(new FindCallback<ParseObject>() {
-                public void done(List<ParseObject> objects, ParseException e) {
-                    if (e == null) {
-                        for (ParseObject user : objects) {
-                            if (previousUsername.equals(user.getString(USERNAME))){ // if found the username in DB
-                                if (previousPasswordHash.equals(user.getString(PASSWORD_HASH))) { //if hashed match
-                                    //Login
-                                    finish();
-                                    startActivity(createIntentWithUserData(user));
-                                }
-                            }
-                        }
-                    } else {
-                        Toast.makeText(getBaseContext(), "objectRetrievalFailed!", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
-        }*/
 
     }
 
@@ -215,7 +194,6 @@ public class LoginActivity extends Activity {
                                                 saveInfo(userInput, hashed, newUser.getObjectId());
                                                 finish();
                                                 startActivity(createIntentWithUserData(newUser));
-                                                // FAZER PASSAR O ID PARA O MAIN
                                             } else {
                                                 // The save failed.
                                                 Log.d("HHHHHHH", "Error updating user data: " + e);

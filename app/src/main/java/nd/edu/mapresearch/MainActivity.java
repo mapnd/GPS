@@ -9,6 +9,7 @@ import android.annotation.TargetApi;
 import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -140,6 +141,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final int PERIOD_TIME = 10000;//run timer every 10 seconds
     private Timer onResumeTimer;
 
+    private static final int REQUEST_ENABLE_BT = 2;
+
     //which icons to show
     private boolean animalReports = true;
     private boolean roadObsReports = true;
@@ -162,21 +165,24 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private AlertDialog markerDialog;
     private String idOfMarkerBeingShown;
 
+    //Used for the autocomplete editbox
     private AutoCompleteTextView autoCompleteTextView;
     PlacesTask placesTask;
     ParserTask parserTask;
 
+    //GPS functionality variables
     private boolean isGPSMode = false;
     private GPSNavigator navigator;
     private String idOfMarkerGps = "";
 
-    private boolean isListShown = false;
+    private boolean isListShown = false;//keeps track if marker list is being shown
 
-    private ArrayList<ParseObject> lastNotExpiredEvents = new ArrayList<ParseObject>();
+    private ArrayList<ParseObject> lastNotExpiredEvents = new ArrayList<ParseObject>();//list of last not expired events
+    private ArrayList<ParseObject> eventsBeingDisplayed = new ArrayList<ParseObject>();//list of events being displayed on screen
 
-    private int newMessages = 0;
+    private int newMessages = 0;//keeps track of how many new messages a user has (used to warn when a user receives another new message)
 
-    private ListView listView;
+    private ListView listView;//marker listview
 
     final CharSequence[] eventsPlotted ={"Bear",
             "Buffalo",
@@ -323,6 +329,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         if(mMap != null){
             setUpClick();
         }
+
     }
 
     //makes sure that app is loading correctly onResume
@@ -358,6 +365,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 });
             }
         }, DELAY_TIME, PERIOD_TIME);
+
     }
 
     @Override
@@ -373,6 +381,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         onResumeTimer.cancel();//stopping the timer
         onResumeTimer = null;//null the timer
         mGoogleApiClient.disconnect();
+
         super.onStop();
     }
 
@@ -398,6 +407,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     public void clearMap(){
         mMap.clear();
         visibleMarkers.clear();
+        eventsBeingDisplayed.clear();
         polyLineDrawn = false;
         circleOnMap = false;
         if (isGPSMode) {
@@ -437,7 +447,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     InputMethodManager.HIDE_NOT_ALWAYS);
 
             // Getting user input location
-            //String location = editTextLoc.getText().toString();
             String location = autoCompleteTextView.getText().toString();
             enteredAddress = location;
 
@@ -453,6 +462,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         public void onClick(View v) {
 
             if (isGPSMode) {
+                // Create a dialog to ask user if it wants to quit GPS navigation
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 TextView text = new TextView(MainActivity.this);
 
@@ -465,13 +475,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         isGPSMode = false;
                         navigator.stopGPS();
                         idOfMarkerGps = "";
-                        //call method to map the polygon
-                        if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
-                            mapDirections(currentPositionLagLng, curSelectedMarker);
-                        } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map
-                            mPolyline.remove();
-                            mapDirections(currentPositionLagLng, curSelectedMarker);
-                        }
+                        mapDirections(currentPositionLagLng, curSelectedMarker);
                     }
                 });
 
@@ -483,9 +487,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 });
                 builder.show();
             } else {
-                if (markerClicked && !polyLineDrawn) {//if a marker selected and no directions on map
+                if (markerClicked && !polyLineDrawn) {//if a marker is selected and no directions on map
                     mapDirections(currentPositionLagLng, curSelectedMarker);
-                } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map
+                } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map, erase the old one
                     mPolyline.remove();
                     mapDirections(currentPositionLagLng, curSelectedMarker);
                 }
@@ -495,7 +499,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     };
 
-    //Method that maps the directions
+    //Method that maps the directions (draws a polyline to the selected marker)
     public void mapDirections(LatLng curSpot, Marker desSpot){
 
         LatLng origin = curSpot;
@@ -552,6 +556,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             final TextView minutesText = (TextView)view.findViewById(R.id.markerInfoDialogMinutesExpireTextView);
             final Button upButton = (Button)view.findViewById(R.id.markerInfoDialogButtonUp);
             final Button downButton = (Button)view.findViewById(R.id.markerInfoDialogButtonDown);
+            //Make a query to get event infos, use the marker title as the query parameter
             ParseQuery query = ParseQuery.getQuery(Utils.PLACE_OBJECT);
             query.getInBackground(marker.getTitle(), new GetCallback<ParseObject>() {
                 @Override
@@ -584,13 +589,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                                 obj.increment(Utils.PLACE_OBJECT_VOTES, -1);
                                 int votes = obj.getInt(Utils.PLACE_OBJECT_VOTES);
                                 obj.add(Utils.PLACE_OBJECT_VOTERS_LIST, userID);
-//                                upButton.setEnabled(false);
-//                                downButton.setEnabled(false);
-//                                obj.saveInBackground();
-//                                votesText.setText("Votes: " + String.valueOf(obj.getInt("votes")));
                                 if (votes < -4) {
-                                    //Delete marker!
-                                    //obj.deleteEventually();
+                                    // Mark as expired
                                     obj.put(Utils.PLACE_OBJECT_EXPIRED, true);
                                     markerDialog.dismiss();
                                 } else {
@@ -674,7 +674,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
-
+                    // Start the GPS function to this marker!
+                    // make dialog with how the user wants to get there, walking or driving
                     final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
                     final RadioButton walking = new RadioButton(MainActivity.this);
                     final int walkingId = View.generateViewId();
@@ -745,7 +746,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 return true;
             }
         });
-
+        // Logs user out
         menu.findItem(R.id.action_logout).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
                 final SharedPreferences settings = getSharedPreferences("Choice", MODE_PRIVATE);
@@ -762,15 +763,15 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 return true;
             }
         });
-
+        // Clears the event DB (PlaceObject)
         menu.findItem(R.id.action_clear_db).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
                 ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.PLACE_OBJECT);
                 query.findInBackground(new FindCallback<ParseObject>() {
                     public void done(List<ParseObject> objects, ParseException e) {
                         if (e == null) {
-                            Log.d("LoginAcitivity", "Query done!");
-                            if (objects.size() == 0) { //no user on DD
+                            Log.d("MainActivity", "Query done!");
+                            if (objects.size() == 0) { //no events on DB
                                 return;
                             }
                             for (ParseObject marker : objects) {
@@ -789,11 +790,12 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 navigator.stopGPS();
                 isGPSMode = false;
                 idOfMarkerGps = "";
+                polyLineDrawn = false;
                 Toast.makeText(MainActivity.this, "GPS Navigation Stopped!", Toast.LENGTH_LONG).show();
                 return false;
             }
         });
-
+        // Make read message dialog appear
         menu.findItem(R.id.read_message).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -822,7 +824,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                                 }
                             });
                             final AlertDialog readMessageDialog = builder.show();
-
+                            // Create listener so, if user chooses a message, display it in a new dialog
                             lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
                                 @Override
@@ -852,7 +854,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                                         }
                                     });
 
-                                    //Reply message
+                                    //Reply message. Make write message dialog appear with the receiver username already set
                                     builder.setNeutralButton("Reply", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
@@ -867,6 +869,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                             });
 
                         } else {
+                            // There was an error on getting the messages
                             pg.dismiss();
                             Toast.makeText(MainActivity.this, "Could not get messages", Toast.LENGTH_LONG).show();
                             Log.d("MessageDialog", e.getMessage());
@@ -876,7 +879,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 return false;
             }
         });
-
+        // Make Write Message dialog appear
         menu.findItem(R.id.write_message).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -885,13 +888,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
             }
         });
-
+        //Make map shorter and show marker list
         menu.findItem(R.id.show_list).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-
-                Log.d("MainActivity", "List View appearing");
-
                 //Make Map shorter
                 SupportMapFragment mMapFragment = (SupportMapFragment) (getSupportFragmentManager()
                         .findFragmentById(R.id.mapview));
@@ -907,10 +907,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 isListShown = true;
 
 
-
                 //Get values and order them
-
+                /*
                 ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.PLACE_OBJECT);
+
                 query.findInBackground(new FindCallback<ParseObject>() {
                     @Override
                     public void done(List<ParseObject> list, ParseException e) {
@@ -919,8 +919,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                             Collections.sort(list, new MarkerComparator(currentPositionLagLng));
                             final MarkerListAdapter markerAdap = new MarkerListAdapter(list, MainActivity.this);
                             listView.setAdapter(markerAdap);
-                            Log.d("MainActivity", String.valueOf(list.size()));
 
+                            // Create listener so if user selects an marker from list, make camera focus on that
                             listView.setOnItemClickListener(new OnItemClickListener() {
                                 @Override
                                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -932,28 +932,44 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                             });
                         }
                     }
-                });
+                }); */
+                Collections.sort(eventsBeingDisplayed, new MarkerComparator(currentPositionLagLng));
+                final MarkerListAdapter markerAdap = new MarkerListAdapter(eventsBeingDisplayed, MainActivity.this);
+                listView.setAdapter(markerAdap);
 
+                // Create listener so if user selects an marker from list, make camera focus on that
+                listView.setOnItemClickListener(new OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        ParseObject obj = markerAdap.getItem(position);
+                        ParseGeoPoint coord = obj.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION);
+                        LatLng latLng = new LatLng(coord.getLatitude(), coord.getLongitude());
+                        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                    }
+                });
 
 
                 return false;
             }
         });
-
+        // Delete expired markers
         menu.findItem(R.id.delete_expired).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
+                //Delete all markers from map
                 for (String id : visibleMarkers.keySet()) {
                     visibleMarkers.get(id).remove();
                 }
                 visibleMarkers.clear();
-                // Or go through markers and see which are expired or not and remove the ones that are
+                eventsBeingDisplayed.clear();
+                eventsBeingDisplayed = lastNotExpiredEvents;
+                // I wanted to avoid making a new query and be dependent on internet the whole time
 
                 drawMarkers(lastNotExpiredEvents);
                 return false;
             }
         });
-
+        // Hide marker list and make map occupy whole view
         menu.findItem(R.id.hide_list).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -981,97 +997,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
     }
 
-    private void writeMessage(String receiver) {
-        //Make dialog appear
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        View layout = getLayoutInflater().inflate(R.layout.message_dialog, null);
-        builder.setView(layout);
-        final EditText receiverET = (EditText)layout.findViewById(R.id.MessageDialogToEditText);
-        final EditText messageET = (EditText)layout.findViewById(R.id.MessageDialogMessageEditText);
 
-        receiverET.setText(receiver);
-        builder.setPositiveButton("Send", null);
-        builder.setNegativeButton("Cancel", null);
-
-        final AlertDialog dialog = builder.create();
-
-        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-
-            @Override
-            public void onShow(DialogInterface dialog2) {
-                Button b = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                b.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        //Check if sender and message are written
-                        final String receiver = receiverET.getText().toString().trim();
-                        final String message = messageET.getText().toString().trim();
-
-                        if (receiver.equals("") || message.equals("")) {
-                            Toast.makeText(MainActivity.this, "Data missing!", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        //Try to send, make progress dialog appear
-                        final ProgressDialog pg = new ProgressDialog(MainActivity.this);
-                        pg.setMessage("Sending message...");
-                        pg.show();
-
-                        //Check if receiver exists
-                        ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.USER_DATA);
-                        query.whereEqualTo(Utils.USER_DATA_USERNAME, receiver);
-                        query.findInBackground(new FindCallback<ParseObject>() {
-                            @Override
-                            public void done(List<ParseObject> list, ParseException e) {
-                                if (e == null) {
-                                    if (list.size() == 0) {
-                                        //Deu merda
-                                        pg.dismiss();
-                                        Toast.makeText(MainActivity.this, "No username found!", Toast.LENGTH_LONG).show();
-                                    } else {
-                                        //Send message
-                                        ParseObject newMessage = new ParseObject(Utils.MESSAGE_DATA);
-                                        newMessage.put(Utils.MESSAGE_DATA_SENDER, userName);
-                                        newMessage.put(Utils.MESSAGE_DATA_RECEIVER, receiver);
-                                        newMessage.put(Utils.MESSAGE_DATA_TEXT, message);
-                                        newMessage.put(Utils.MESSAGE_DATA_READ, false);
-                                        newMessage.saveInBackground(new SaveCallback() {
-                                            @Override
-                                            public void done(ParseException e) {
-                                                pg.dismiss();
-                                                dialog.dismiss();
-                                                if (e == null) {
-                                                    Toast.makeText(MainActivity.this, "Message sent!", Toast.LENGTH_LONG).show();
-                                                } else {
-                                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
-                                                }
-                                            }
-                                        });
-                                    }
-                                } else {
-                                    pg.dismiss();
-                                    dialog.dismiss();
-                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
-                                    Log.d("MessageDialog", e.getMessage());
-                                }
-                            }
-                        });
-
-                    }
-                });
-
-                b = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-                b.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                    }
-                });
-            }
-        });
-
-        dialog.show();
-    }
 
 
     //////////////////////////////
@@ -1307,13 +1233,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     userObject.put(Utils.PLACE_OBJECT_NOTES, "No notes");
 
                 }else {
-                    userObject.put(Utils.PLACE_OBJECT_NOTES, editnotes);
+                    userObject.put(Utils.PLACE_OBJECT_NOTES, notes);
 
                 }
 
                 int minutesInt = Integer.valueOf(minutes);
 
-                if (minutesInt == 0) {
+                if (minutesInt <= 0) {
                     Toast.makeText(MainActivity.this, "Please input a valid number for minutes to expire", Toast.LENGTH_LONG).show();
                     dialog_error = true;
                     return;
@@ -1322,7 +1248,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     userObject.put(Utils.PLACE_OBJECT_USERNAME, userName);
                     userObject.put(Utils.PLACE_OBJECT_USERID, userID);
                     userObject.put(Utils.PLACE_OBJECT_VOTES, 1);
-                    userObject.add(Utils.PLACE_OBJECT_VOTERS_LIST, userID); //or put
+                    userObject.add(Utils.PLACE_OBJECT_VOTERS_LIST, userID);
                     userObject.put(Utils.PLACE_OBJECT_EXPIRED, false);
 
                 }
@@ -1330,12 +1256,14 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 userObject.saveInBackground(new SaveCallback() {
                     public void done(ParseException e) {
                         if (e == null) {
-                            // Saved successfully.
+                            // Saved successfully. Put in map!
                             Log.d("HHHHHHH", "Marker Saved!");
                             marker.title(userObject.getObjectId());
                             Marker tempMarker = mMap.addMarker(marker);
                             visibleMarkers.put(userObject.getObjectId(), tempMarker);
+                            eventsBeingDisplayed.add(userObject);
                             userObject = new ParseObject(Utils.PLACE_OBJECT);
+
                         } else {
                             // The save failed.
                             Log.d("HHHHHHH", "Error updating user data: " + e);
@@ -1375,7 +1303,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             public void onDismiss(DialogInterface dialog) {
                 //If the error flag was set to true then show the dialog again
                 if (dialog_error == true) {
-                    Log.d("MainActivity", "dialog error eh true!");
                     settingInfo.show();
                 } else {
                     return;
@@ -1427,7 +1354,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         ParseQuery<ParseObject> messageQuery = ParseQuery.getQuery(Utils.MESSAGE_DATA);
         messageQuery.whereEqualTo(Utils.MESSAGE_DATA_RECEIVER, userName);
         messageQuery.whereEqualTo(Utils.MESSAGE_DATA_READ, false);
-
         messageQuery.findInBackground(new FindCallback<ParseObject>() {
             @Override
             public void done(List<ParseObject> list, ParseException e) {
@@ -1460,9 +1386,11 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         navigator.advanceDestination();
                         directions.setText("Next step: " + Html.fromHtml(navigator.getCurrentDirection()));
                         distanceDuration.setText("Distance: " + navigator.getCurrentDistance() + ", Duration: " + navigator.getCurrentDurations());
-                        //ver de por polyline
-                        mPolyline.remove();
+                        if (polyLineDrawn) {
+                            mPolyline.remove();
+                        }
                         mPolyline = mMap.addPolyline(navigator.getNextPolyline());
+                        polyLineDrawn = true;
 
                     }
                 }
@@ -1477,18 +1405,19 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         Log.d("MainActivity", "Size: " + objects.size());
 
         //See if marker found is already being displayed
-        //lastMarkersFound = objects;
         lastNotExpiredEvents = new ArrayList<ParseObject>(objects);
 
         ArrayList<ParseObject> eventsToAddToMap = new ArrayList<ParseObject>();
+        // Check which events are not on the map
         for (ParseObject event : objects) {
             if (!visibleMarkers.keySet().contains(event.getObjectId())) {
                 eventsToAddToMap.add(event);
+                eventsBeingDisplayed.add(event);
             }
         }
         // Updating the database, checking to see newly expired markers
         for(int i = 0; i < objects.size(); i++) {
-            //Let us check if ther marker should be deleted first!
+            //Let us check if the marker should be expired
             Date creationDate = objects.get(i).getCreatedAt();
             Calendar calendar = GregorianCalendar.getInstance();
             calendar.setTime(creationDate);
@@ -1803,6 +1732,29 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
 
     }
+
+    ///////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // SECTION G //
+    ///////////////
+
+    /* Used in the autocomplete text view, used to search for locations by users */
     // Fetches all places from GooglePlaces AutoComplete Web Service
     private class PlacesTask extends AsyncTask<String, Void, String>{
 
@@ -1812,7 +1764,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             String data = "";
 
             // Obtain browser key from https://code.google.com/apis/console
-            String key = "key=AIzaSyCh0IztU40zYvay3rZzbITFFfIPVfQN3gM";
+            String key = "key=" + getString(R.string.web_service_key);
 
             String input="";
 
@@ -1839,7 +1791,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
             try{
                 // Fetching the data from we service
-                Log.d("MainActivity", "EXECUTANDO DOWNLOAD");
                 data = downloadUrl(url);
             }catch(Exception e){
                 Log.d("Background Task",e.toString());
@@ -1858,7 +1809,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             parserTask.execute(result);
         }
     }
-
+    /* Used by the AutoCompleteTextView to get the options from Google and show to the user*/
     /** A class to parse the Google Places in JSON format */
     private class ParserTask extends AsyncTask<String, Integer, List<HashMap<String,String>>>{
 
@@ -1897,7 +1848,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             autoCompleteTextView.setAdapter(adapter);
         }
     }
-
+    /* Method that receives a dialog and an event, updates the dialog that is open*/
     private void updateMarkerDialog (AlertDialog dialog, ParseObject obj) {
         TextView minutesText = (TextView)dialog.findViewById(R.id.markerInfoDialogMinutesExpireTextView);
 
@@ -1917,7 +1868,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
 
     }
-
+    /* Method used to start gps navigation*/
     private void startGPSNavigation(Marker marker, String mode) {
         isGPSMode = true;
         if(polyLineDrawn) {
@@ -1937,13 +1888,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         MenuItem itm = menu.findItem(R.id.gps_off);
         MenuItem showList = menu.findItem(R.id.show_list);
         MenuItem hideList = menu.findItem(R.id.hide_list);
-
+        // If it is in GPS Mode show option to turn off
         if (!isGPSMode) {
             itm.setVisible(false);
         } else {
             itm.setVisible(true);
         }
-
+        // If marker list is shown, show option to hide it and vice-versa
         if (isListShown) {
             showList.setVisible(false);
             hideList.setVisible(true);
@@ -1953,7 +1904,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
         return true;
     }
-
+    // Used to compare the distance of two events to the origin (user location), used on marker list
     static class MarkerComparator implements Comparator<ParseObject>
     {
         private LatLng origin;
@@ -1972,7 +1923,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             return Double.compare(disA, disB);
         }
     }
-
+    /* Method used to draw markers on screen, receives a list of events to be added*/
     private void drawMarkers(ArrayList<ParseObject> events) {
         if (events.size() == 0) {
             return;
@@ -2017,6 +1968,101 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 }
             }
         }
+    }
+
+    /* Method that creates the Dialog to write a message*/
+
+    private void writeMessage(String receiver) {
+        //Make dialog appear
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        View layout = getLayoutInflater().inflate(R.layout.message_dialog, null);
+        builder.setView(layout);
+        final EditText receiverET = (EditText)layout.findViewById(R.id.MessageDialogToEditText);
+        final EditText messageET = (EditText)layout.findViewById(R.id.MessageDialogMessageEditText);
+
+        receiverET.setText(receiver);
+        builder.setPositiveButton("Send", null);
+        builder.setNegativeButton("Cancel", null);
+
+        final AlertDialog dialog = builder.create();
+
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+
+            @Override
+            public void onShow(DialogInterface dialog2) {
+                Button b = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                b.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //Check if sender and message are written
+                        final String receiver = receiverET.getText().toString().trim();
+                        final String message = messageET.getText().toString().trim();
+
+                        if (receiver.equals("") || message.equals("")) {
+                            Toast.makeText(MainActivity.this, "Data missing!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        //Try to send, make progress dialog appear
+                        final ProgressDialog pg = new ProgressDialog(MainActivity.this);
+                        pg.setMessage("Sending message...");
+                        pg.show();
+
+                        //Check if receiver exists
+                        ParseQuery<ParseObject> query = ParseQuery.getQuery(Utils.USER_DATA);
+                        query.whereEqualTo(Utils.USER_DATA_USERNAME, receiver);
+                        query.findInBackground(new FindCallback<ParseObject>() {
+                            @Override
+                            public void done(List<ParseObject> list, ParseException e) {
+                                if (e == null) {
+                                    if (list.size() == 0) {
+                                        // No username was found
+                                        pg.dismiss();
+                                        Toast.makeText(MainActivity.this, "No username found!", Toast.LENGTH_LONG).show();
+                                    } else {
+                                        //Send message
+                                        ParseObject newMessage = new ParseObject(Utils.MESSAGE_DATA);
+                                        newMessage.put(Utils.MESSAGE_DATA_SENDER, userName);
+                                        newMessage.put(Utils.MESSAGE_DATA_RECEIVER, receiver);
+                                        newMessage.put(Utils.MESSAGE_DATA_TEXT, message);
+                                        newMessage.put(Utils.MESSAGE_DATA_READ, false);
+                                        newMessage.saveInBackground(new SaveCallback() {
+                                            @Override
+                                            public void done(ParseException e) {
+                                                pg.dismiss();
+                                                dialog.dismiss();
+                                                if (e == null) {
+                                                    Toast.makeText(MainActivity.this, "Message sent!", Toast.LENGTH_LONG).show();
+                                                } else {
+                                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
+                                                }
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    // if there was a error on the query, dismiss
+                                    pg.dismiss();
+                                    dialog.dismiss();
+                                    Toast.makeText(MainActivity.this, "An error occurred!", Toast.LENGTH_LONG).show();
+                                    Log.d("MessageDialog", e.getMessage());
+                                }
+                            }
+                        });
+
+                    }
+                });
+                // Negative button, make dialog disappear
+                b = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+                b.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+            }
+        });
+
+        dialog.show();
     }
 
 }

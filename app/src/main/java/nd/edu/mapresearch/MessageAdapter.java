@@ -17,6 +17,7 @@ import java.util.GregorianCalendar;
 
 /**
  * Created by JoaoGuilherme on 7/4/2015.
+ * Adapter used by the message listview
  */
 public class MessageAdapter extends BaseAdapter {
 

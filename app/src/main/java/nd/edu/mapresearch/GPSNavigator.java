@@ -25,6 +25,7 @@ import java.util.List;
 
 /**
  * Created by JoaoGuilherme on 6/21/2015.
+ * Class used for the GPS Navigation
  */
 public class GPSNavigator {
     public static final String DRIVING_MODE = "driving";
@@ -56,6 +57,7 @@ public class GPSNavigator {
         return nextDestination;
     }
 
+    //Returns if we are in the final destination or not
     public boolean isFinalDestination() {
         if (currentPositionInList == coords.size()-1) {
             return true;
@@ -85,6 +87,7 @@ public class GPSNavigator {
         return durations.get(currentPositionInList);
     }
 
+    //Starts the navigation and gets coordinates
     public GPSNavigator(LatLng start, LatLng end, String mode, MainActivity act){
         activity = act;
         isReady = false;
@@ -176,8 +179,6 @@ public class GPSNavigator {
         }
     }
 
-    /** Followed tutorial on
-     * http://wptrafficanalyzer.in/blog/driving-distance-and-travel-time-duration-between-two-locations-in-google-map-android-api-v2/ */
     private String downloadUrl(String stringURL) throws IOException {
         String response = "";
         InputStream content = null;
@@ -205,7 +206,7 @@ public class GPSNavigator {
     public boolean isGPSReady() {
         return isReady;
     }
-
+    // Decodes the polyline string
     private List<LatLng> decodePoly(String encoded) {
 
         List<LatLng> poly = new ArrayList<LatLng>();
@@ -238,7 +239,7 @@ public class GPSNavigator {
         }
         return poly;
     }
-
+    // returns the next polyline to be drawn on map
     public PolylineOptions getNextPolyline() {
         String hash = getCurrentPolyline();
         List<LatLng> list = decodePoly(hash);
@@ -251,7 +252,7 @@ public class GPSNavigator {
         }
         return line;
     }
-
+    // Stops the gps
     public void stopGPS() {
         activity.directions.setText("");
         activity.distanceDuration.setText("");
