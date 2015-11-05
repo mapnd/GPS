@@ -161,7 +161,9 @@ public class GPSNavigator {
                 currentPositionInList = 0;
                 activity.directions.setText("Next step: " + Html.fromHtml(getCurrentDirection()));
                 activity.distanceDuration.setText("Distance: " + getCurrentDistance() + ", Duration: " + getCurrentDurations());
+                activity.audio.speak((Html.fromHtml(getCurrentDirection()).toString()));
                 activity.mPolyline = activity.mMap.addPolyline(getNextPolyline());
+                activity.mPolyline = activity.mMap.addPolyline(getAllPolylines());
                 Log.d("GPS", "Directions");
                 for (String a : directs) {
                     Log.d("GPS", a);
@@ -252,6 +254,22 @@ public class GPSNavigator {
         }
         return line;
     }
+
+    // function which adds together all the polylines in array list to create one line to destination.
+    public PolylineOptions getAllPolylines(){
+        PolylineOptions line = new PolylineOptions();
+        line.width(5);
+        line.color(Color.BLUE);
+        for (int i=0; i<polylines.size(); i++){
+            String hash = polylines.get(i);
+            List<LatLng> list = decodePoly(hash);
+            for (LatLng latlng : list){
+                line.add(latlng);
+            }
+        }
+        return line;
+    }
+
     // Stops the gps
     public void stopGPS() {
         activity.directions.setText("");

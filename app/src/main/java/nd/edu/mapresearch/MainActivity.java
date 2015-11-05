@@ -15,6 +15,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.hardware.GeomagneticField;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Address;
 import android.location.Criteria;
 import android.location.Geocoder;
@@ -28,6 +33,7 @@ import android.text.Editable;
 import android.text.Html;
 import android.text.Layout;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -47,6 +53,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Filterable;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RadioButton;
@@ -61,6 +68,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
@@ -68,6 +76,7 @@ import com.google.android.gms.maps.GoogleMap.OnMapLongClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
@@ -114,7 +123,7 @@ import java.util.logging.LogRecord;
 
 public class MainActivity extends FragmentActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        LocationListener{
 
     public  GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private double currentLatitude;//The current latitude of the user
@@ -124,7 +133,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private boolean markerClicked;//Keeps track if a marker is clicked
     private boolean polyLineDrawn;//Keeps track if a route(polyLine) is drawn
     public TextView distanceDuration;//This textview displays the distance and duration once a user chooses to map directions
-    public TextView directions;
+    public TextView directions;//This textview displays the step by step directions during GPS mode
+    public RelativeLayout relativeDirections;//This is the relativelayout that has the two above textviews
+    public ImageView turnSignal;//This image view shows which way to turn during GPS mode
+    public Button zoomButton;//This button starts the zoom on the directions
     private String enteredAddress;//Used for adding the title of the marker placed at a searched location
     private ParseObject userObject;//The object that is used to push a new object to the database
     private String iconOfOnLongClick;//Stores the name of the icon chosen by the user
@@ -135,6 +147,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private boolean dialog_error;
     private String userName;
     private String userID;
+    private boolean GPSzoom;
+    public Speech audio;//Speech class- used to say directions
 
     //for use of timer, run parse query every 10 seconds, delay 1
     private final int DELAY_TIME = 10000;//delay 10 second
@@ -181,6 +195,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private ArrayList<ParseObject> eventsBeingDisplayed = new ArrayList<ParseObject>();//list of events being displayed on screen
 
     private int newMessages = 0;//keeps track of how many new messages a user has (used to warn when a user receives another new message)
+
+    private MarkerListAdapter markerListAdapter;
 
     private ListView listView;//marker listview
 
@@ -243,8 +259,11 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
         userObject = new ParseObject(Utils.PLACE_OBJECT);
 
+        // Set views for GPS mode
         distanceDuration = (TextView) findViewById(R.id.tv_distance_time);
         directions = (TextView) findViewById(R.id.MainDirectionsTextView);
+        turnSignal = (ImageView) findViewById(R.id.turn_signal);
+        relativeDirections = (RelativeLayout) findViewById(R.id.RelativeLayoutDirections);
 
         Button findButton = (Button)findViewById(R.id.find_btn);//button to execute find location
         Button clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
@@ -265,6 +284,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             setUpClick();
         }
 
+        //set up zoom mode
+        zoomButton = (Button) findViewById(R.id.zoomDirectionsButton);
+        GPSzoom = false;
+        zoomButton.setText("Start");
+        zoomButton.setOnClickListener(zoomButtonListener);
+
+        audio = new Speech(MainActivity.this);
     }
 
     //makes sure that app is loading correctly onResume
@@ -351,7 +377,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
         isGPSMode = false;
         idOfMarkerGps = "";
-
+        GPSzoom = false;
     }
 
 
@@ -387,6 +413,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
             if(location!=null && !location.equals("")){
                 new GeocodingTask().execute(location);
+                audio.speak("Finding "+location);
+            } else {
+                audio.speak("Please enter location.");
             }
         }
     };
@@ -434,6 +463,35 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     };
 
+    // when the start of end button is pressed- start or end GPS zoom mode.
+    private final OnClickListener zoomButtonListener = new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if (zoomButton.getText()=="Start"){ //if start buttom is pressed
+                audio.speak("Starting navigation");
+                GPSzoom = true;
+                zoomButton.setText("End");
+                setCamera(60, 22, 0);
+            } else { //if end button
+                audio.speak("Ending navigation.");
+                GPSzoom = false;
+                zoomButton.setText("Start");
+                setCamera(0, 15, 0);
+            }
+        }
+    };
+
+    //Method that changes map to specified tilt,zoom and bearing
+    public void setCamera(int t,int z,float b){
+        CameraPosition cameraPosition = new CameraPosition.Builder().
+                target(currentPositionLagLng).
+                tilt(t).
+                zoom(z).
+                bearing(b).
+                build();
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
     //Method that maps the directions (draws a polyline to the selected marker)
     public void mapDirections(LatLng curSpot, Marker desSpot){
 
@@ -470,6 +528,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final OnClickListener clearClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
+            relativeDirections.setVisibility(View.GONE);
             distanceDuration.setText("");//clears distanceDuration Text
             clearMap();
         }
@@ -479,6 +538,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final OnMarkerClickListener onMarkerClickListener = new OnMarkerClickListener() {
         @Override
         public boolean onMarkerClick(final Marker marker) {
+            // set markerClicked to true and set curSelectedMarker
+            curSelectedMarker = marker;
+            markerClicked = true;
+            // continue rest of function
             Log.d("MainActivity", "marker clicked!");
             final AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
             //final TextView textview = (TextView)new TextView(MainActivity.this);
@@ -496,7 +559,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             query.getInBackground(marker.getTitle(), new GetCallback<ParseObject>() {
                 @Override
                 public void done(final ParseObject obj, ParseException e) {
-                    if (e == null){
+                    if (e == null) {
                         // If current user has already voted, disable vote buttons
                         List<String> userIds = obj.getList(Utils.PLACE_OBJECT_VOTERS_LIST);
                         if (userIds.contains(userID)) {
@@ -554,16 +617,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         if (calendar.get(Calendar.HOUR_OF_DAY) == 0) {
                             tempHour = "12";
                             amorpm = "AM";
-                        }
-                        else if (calendar.get(Calendar.HOUR_OF_DAY) > 12) {
+                        } else if (calendar.get(Calendar.HOUR_OF_DAY) > 12) {
                             tempHour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY) - 12);
                             amorpm = "PM";
-                        }
-                        else if (calendar.get(Calendar.HOUR_OF_DAY) < 12) {
+                        } else if (calendar.get(Calendar.HOUR_OF_DAY) < 12) {
                             tempHour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
                             amorpm = "AM";
-                        }
-                        else {
+                        } else {
                             tempHour = "12";
                             amorpm = "PM";
                         }
@@ -573,7 +633,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         // Checking to see how many minutes remaining
                         long timeOfCreation = creationDate.getTime();
                         long currentTime = System.currentTimeMillis();
-                        long timeOfExpiration = timeOfCreation + obj.getInt(Utils.PLACE_OBJECT_MINUTES)*60000;
+                        long timeOfExpiration = timeOfCreation + obj.getInt(Utils.PLACE_OBJECT_MINUTES) * 60000;
                         long difference = timeOfExpiration - currentTime;
                         long minutes = difference / 60000;
                         // If is already expired, display it correctly, if not, display the minutes
@@ -666,7 +726,11 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         //LatLng userPosition = new LatLng(location.getLatitude(), location.getLongitude());
         if (mMap != null && !startUp){
             startUp = true;
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPositionLagLng, 15));
+            setCamera(0, 15, 0);
+        }
+        // if the GPS mode and zoom setting is on we want to animate the camera
+        if (isGPSMode && GPSzoom){
+            setCamera(60,22,location.getBearing());
         }
     }
 
@@ -827,15 +891,23 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         menu.findItem(R.id.show_list).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
+                DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+
+                float dpHeight = displayMetrics.heightPixels / displayMetrics.density;
+                float dpWidth = displayMetrics.widthPixels / displayMetrics.density;
+
+                int width = (int) dpWidth;
+
+
                 //Make Map shorter
                 SupportMapFragment mMapFragment = (SupportMapFragment) (getSupportFragmentManager()
                         .findFragmentById(R.id.mapview));
                 ViewGroup.LayoutParams params = mMapFragment.getView().getLayoutParams();
-                params.width = 800;
+                params.width = (int) (width*0.8);
                 mMapFragment.getView().setLayoutParams(params);
 
                 RelativeLayout.LayoutParams params2 = (RelativeLayout.LayoutParams) listView.getLayoutParams();
-                params2.width = 200;
+                params2.width = (int) (width*0.19);
                 listView.setLayoutParams(params2);
                 listView.setVisibility(View.VISIBLE);
                 listView.setEnabled(true);
@@ -920,7 +992,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 RelativeLayout.LayoutParams params2 = (RelativeLayout.LayoutParams) listView.getLayoutParams();
                 params2.width = 0;
                 listView.setLayoutParams(params2);
-                listView.setVisibility(View.INVISIBLE);
+                listView.setVisibility(View.GONE);
                 listView.setEnabled(false);
                 isListShown = false;
 
@@ -1319,7 +1391,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     } else {
                         //Change to next destination
                         navigator.advanceDestination();
+                        relativeDirections.setVisibility(View.VISIBLE);
                         directions.setText("Next step: " + Html.fromHtml(navigator.getCurrentDirection()));
+                        setTurnSignal(directions.getText().toString());
+                        audio.speak((Html.fromHtml(navigator.getCurrentDirection())).toString());
                         distanceDuration.setText("Distance: " + navigator.getCurrentDistance() + ", Duration: " + navigator.getCurrentDurations());
                         if (polyLineDrawn) {
                             mPolyline.remove();
@@ -1328,6 +1403,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         polyLineDrawn = true;
 
                     }
+                } else if (distance<=100 && distance>=90){
+                    audio.speak((Html.fromHtml(navigator.getCurrentDirection())).toString() + " in 100 meters.");
+                } else if (distance <= 10){
+                    audio.speak((Html.fromHtml(navigator.getCurrentDirection())).toString() + " now.");
                 }
             }
         }
@@ -1577,6 +1656,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 lineOptions.width(2);
                 lineOptions.color(Color.rgb(30, 60, 90));
             }
+            relativeDirections.setVisibility(View.VISIBLE);
             distanceDuration.setText("Distance: "+distance + ", Duration: "+duration);
             // Drawing polyline in the Google Map
             mPolyline = mMap.addPolyline(lineOptions);
@@ -1812,8 +1892,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         idOfMarkerGps = marker.getTitle();
         LatLng start = currentPositionLagLng;
         LatLng end = marker.getPosition();
+        relativeDirections.setVisibility(View.VISIBLE);
         navigator = new GPSNavigator(start, end, mode, MainActivity.this);
-
+        setTurnSignal(directions.getText().toString());
     }
 
     @Override
@@ -1863,6 +1944,12 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         if (events.size() == 0) {
             return;
         }
+        // here we check if the marker list is shown and if we should update it
+        if (isListShown) {
+            markerListAdapter = new MarkerListAdapter(events, MainActivity.this);
+            markerListAdapter.notifyDataSetChanged();
+        }
+
         for (ParseObject event : events) {
             MarkerOptions nearObject = new MarkerOptions().position(new LatLng(event.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION).getLatitude(),
                     event.getParseGeoPoint(Utils.PLACE_OBJECT_LOCATION).getLongitude()));
@@ -1998,6 +2085,18 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         });
 
         dialog.show();
+    }
+
+    /* method which changes turn signal during GPS directions */
+    void setTurnSignal(String direction){
+        direction.toLowerCase();
+        if (direction.contains("left")||direction.contains("west")){
+            turnSignal.setImageDrawable(getResources().getDrawable(R.drawable.leftarrow));
+        } else if (direction.contains("right")||direction.contains("east")){
+            turnSignal.setImageDrawable(getResources().getDrawable(R.drawable.rightarrow));
+        } else {
+            turnSignal.setImageDrawable(getResources().getDrawable(R.drawable.uparrow));
+        }
     }
 
 }
