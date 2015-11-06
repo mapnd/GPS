@@ -132,7 +132,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private LatLng currentPositionLagLng;//The current position of the user as a LatLng object
     private boolean markerClicked;//Keeps track if a marker is clicked
     private boolean polyLineDrawn;//Keeps track if a route(polyLine) is drawn
-    public TextView distanceDuration;//This textview displays the distance and duration once a user chooses to map directions
+    public TextView distanceDuration;//This textview displays the distance and duration once a user chooses to m*mapap directions
     public TextView directions;//This textview displays the step by step directions during GPS mode
     public RelativeLayout relativeDirections;//This is the relativelayout that has the two above textviews
     public ImageView turnSignal;//This image view shows which way to turn during GPS mode
@@ -148,6 +148,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private String userName;
     private String userID;
     private boolean GPSzoom;
+    private Menu menu;//the map's menu (settings)
     public Speech audio;//Speech class- used to say directions
 
     //for use of timer, run parse query every 10 seconds, delay 1
@@ -425,7 +426,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         @Override
         public void onClick(View v) {
 
-            if (isGPSMode) {
+            /*if (isGPSMode) {
                 // Create a dialog to ask user if it wants to quit GPS navigation
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 TextView text = new TextView(MainActivity.this);
@@ -458,12 +459,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     mapDirections(currentPositionLagLng, curSelectedMarker);
                 }
 
-            }
+            }*/
 
         }
     };
 
     // when the start of end button is pressed- start or end GPS zoom mode.
+    // Created by Victoria Johnston
     private final OnClickListener zoomButtonListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -520,6 +522,12 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             @Override
             public void onMapClick(LatLng point) {
                 markerClicked = false;//tells map directions that there is no marker clicked
+                // Hides keyboard everytime map is clicked
+                InputMethodManager inputManager = (InputMethodManager)
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+
+                inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),0);
+                menu.close();
             }
         });
     }
@@ -541,6 +549,14 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             // set markerClicked to true and set curSelectedMarker
             curSelectedMarker = marker;
             markerClicked = true;
+            // If the marker clicked is a searched address (red marker) show different alert dialog
+            try {
+                if (marker.getSnippet().equals("address")) {
+                    showAddressAlertDialog(marker);
+                }
+            } catch (Exception e) {
+                e.getMessage();
+            }
             // continue rest of function
             Log.d("MainActivity", "marker clicked!");
             final AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -717,6 +733,56 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             return true;
         }
     };
+
+    /*
+        Function which creates alert dialog when an address(red marker) is clicked.
+        Created by Victoria Johnston
+     */
+    private void showAddressAlertDialog(final Marker marker){
+        final AlertDialog.Builder gpsDialog = new AlertDialog.Builder(MainActivity.this);
+        gpsDialog.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Start the GPS function to this marker!
+                // make dialog with how the user wants to get there, walking or driving
+                final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                final RadioButton walking = new RadioButton(MainActivity.this);
+                final int walkingId = View.generateViewId();
+                walking.setId(walkingId);
+                walking.setText("Walking");
+                RadioButton driving = new RadioButton(MainActivity.this);
+                int drivingId = View.generateViewId();
+                driving.setId(drivingId);
+                driving.setText("Driving");
+                radioGroup.addView(walking, 0);
+                radioGroup.addView(driving, 1);
+
+                final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
+                gpsBuilder.setView(radioGroup);
+
+                gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        int id = radioGroup.getCheckedRadioButtonId();
+                        if (id == walkingId) {
+                            startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
+                        } else {
+                            startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
+                        }
+                    }
+                });
+                gpsBuilder.show();
+            }
+        });
+        gpsDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            /* Exits the dialog */
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // do nothing besides exiting dialog
+            }
+        });
+        gpsDialog.show();
+    }
 
     @Override
     public void onLocationChanged(Location location) {
@@ -999,9 +1065,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 return false;
             }
         });
+        this.menu = menu;
         return true;
-
-
     }
 
 
@@ -1019,7 +1084,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         mMap.setOnMapLongClickListener(new OnMapLongClickListener() {
 
             @Override
-            public void onMapLongClick(LatLng latLng) {
+            public void onMapLongClick(final LatLng latLng) {
                 final LatLng a = latLng;
                 float distanceBtCurA = Utils.distanceAtoB((float)a.latitude,(float)a.longitude,(float)currentPositionLagLng.latitude,(float)currentPositionLagLng.longitude);
 
@@ -1041,6 +1106,41 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             // do nothing besides exiting dialog
+                        }
+                    });
+                    builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            // Start the GPS function to this marker!
+                            // make dialog with how the user wants to get there, walking or driving
+                            final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                            final RadioButton walking = new RadioButton(MainActivity.this);
+                            final int walkingId = View.generateViewId();
+                            walking.setId(walkingId);
+                            walking.setText("Walking");
+                            RadioButton driving = new RadioButton(MainActivity.this);
+                            int drivingId = View.generateViewId();
+                            driving.setId(drivingId);
+                            driving.setText("Driving");
+                            radioGroup.addView(walking, 0);
+                            radioGroup.addView(driving, 1);
+
+                            final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
+                            gpsBuilder.setView(radioGroup);
+                            final Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
+                            gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    int id = radioGroup.getCheckedRadioButtonId();
+                                    if (id == walkingId) {
+                                        startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
+                                    } else {
+                                        startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
+                                    }
+                                }
+                            });
+                            gpsBuilder.show();
+
                         }
                     });
                     final AlertDialog disDialog = builder.show();
@@ -1520,6 +1620,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 addressMarkerOptions = new MarkerOptions();
                 addressMarkerOptions.position(markerLatLng);
                 addressMarkerOptions.title(addressText);
+                addressMarkerOptions.snippet("address"); //this snippet indicates that that the marker is a searched address
 
                 mMap.addMarker(addressMarkerOptions);
 
@@ -1881,8 +1982,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         } else {
             minutesText.setText("Minutes until expires: " + String.valueOf(minutes));
         }
-
     }
+
     /* Method used to start gps navigation*/
     private void startGPSNavigation(Marker marker, String mode) {
         isGPSMode = true;
@@ -2087,7 +2188,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         dialog.show();
     }
 
-    /* method which changes turn signal during GPS directions */
+    /* method which changes turn signal during GPS directions
+        created by Victoria Johnston
+     */
     void setTurnSignal(String direction){
         direction.toLowerCase();
         if (direction.contains("left")||direction.contains("west")){
