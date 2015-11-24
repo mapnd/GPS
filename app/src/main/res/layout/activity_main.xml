@@ -123,6 +123,14 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"/>
 
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/audio_button"
+            android:text="Audio input"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"/>
+
         <ListView
             android:layout_width="0dp"
             android:layout_height="match_parent"

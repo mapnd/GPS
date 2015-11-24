@@ -26,6 +26,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
+import android.speech.RecognizerIntent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -147,7 +148,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private boolean dialog_error;
     private String userName;
     private String userID;
-    private boolean GPSzoom;
+    private boolean GPSzoom; //indicates whether gps mode is on
     private Menu menu;//the map's menu (settings)
     public Speech audio;//Speech class- used to say directions
 
@@ -270,11 +271,13 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         Button clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
         Button mapDirButton = (Button)findViewById(R.id.map_directions_btn);//maps directions from current location to selected marker
         Button gatherLocations = (Button)findViewById(R.id.query_btn);//maps directions from current location to selected marker
+        Button audioButton = (Button)findViewById(R.id.audio_button);//button which lets the user say a command
         //listeners for the respective buttons
         gatherLocations.setOnClickListener(gatherLocsButtonListener);
         findButton.setOnClickListener(findClickListener);
         clearButton.setOnClickListener(clearClickListener);
         mapDirButton.setOnClickListener(mapDirClickListener);
+        audioButton.setOnClickListener(audioClickListener);
 
         listView = (ListView) findViewById(R.id.markersListView);
 
@@ -464,6 +467,14 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     };
 
+    private final OnClickListener audioClickListener = new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            InputSpeech inputSpeech = new InputSpeech(MainActivity.this,getApplicationContext());
+            inputSpeech.promptSpeechInput();
+        }
+    };
+
     // when the start of end button is pressed- start or end GPS zoom mode.
     // Created by Victoria Johnston
     private final OnClickListener zoomButtonListener = new OnClickListener() {
@@ -515,7 +526,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
 
     /*
-     *Sets up the onClickMap Listener
+     *Victoria Johnston - Sets up the onClickMap Listener. Closes keyboard and menu when map is clicked
      */
     public void setUpClick(){
         mMap.setOnMapClickListener(new OnMapClickListener() {
@@ -527,7 +538,25 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                         getSystemService(Context.INPUT_METHOD_SERVICE);
 
                 inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),0);
+                // close menu whenever map is clicked
                 menu.close();
+                // closes marker list if it is showing
+                if (isListShown){
+                    //Make Map shorter
+                    SupportMapFragment mMapFragment = (SupportMapFragment) (getSupportFragmentManager()
+                            .findFragmentById(R.id.mapview));
+                    ViewGroup.LayoutParams params = mMapFragment.getView().getLayoutParams();
+                    params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                    mMapFragment.getView().setLayoutParams(params);
+
+
+                    RelativeLayout.LayoutParams params2 = (RelativeLayout.LayoutParams) listView.getLayoutParams();
+                    params2.width = 0;
+                    listView.setLayoutParams(params2);
+                    listView.setVisibility(View.GONE);
+                    listView.setEnabled(false);
+                    isListShown = false;
+                }
             }
         });
     }
@@ -857,6 +886,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 idOfMarkerGps = "";
                 polyLineDrawn = false;
                 Toast.makeText(MainActivity.this, "GPS Navigation Stopped!", Toast.LENGTH_LONG).show();
+                relativeDirections.setVisibility(View.GONE);
+                distanceDuration.setText("");//clears distanceDuration Text
+                clearMap();
                 return false;
             }
         });
@@ -969,11 +1001,11 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 SupportMapFragment mMapFragment = (SupportMapFragment) (getSupportFragmentManager()
                         .findFragmentById(R.id.mapview));
                 ViewGroup.LayoutParams params = mMapFragment.getView().getLayoutParams();
-                params.width = (int) (width*0.8);
+                params.width = (int) (width*1.3);
                 mMapFragment.getView().setLayoutParams(params);
 
                 RelativeLayout.LayoutParams params2 = (RelativeLayout.LayoutParams) listView.getLayoutParams();
-                params2.width = (int) (width*0.19);
+                params2.width = width;
                 listView.setLayoutParams(params2);
                 listView.setVisibility(View.VISIBLE);
                 listView.setEnabled(true);
@@ -1095,6 +1127,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     //do nothing
                 }else{
                     GridView gridView;
+                    LayoutInflater inflater = getLayoutInflater();
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                     CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.reportDialog, Utils.imageID);
                     gridView=new GridView(MainActivity.this);
@@ -2199,6 +2232,30 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             turnSignal.setImageDrawable(getResources().getDrawable(R.drawable.rightarrow));
         } else {
             turnSignal.setImageDrawable(getResources().getDrawable(R.drawable.uparrow));
+        }
+    }
+
+    /* Created by Victoria Johnston
+        Called from inputspeech. It prints a toast on what the user said and then calls inputspeech function to interpret it
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        final int REQ_CODE_SPEECH_INPUT = 100;
+        switch (requestCode) {
+            case REQ_CODE_SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && null != data) {
+
+                    ArrayList<String> result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    //txtSpeechInput.setText(result.get(0));
+                    Toast.makeText(MainActivity.this,result.get(0), Toast.LENGTH_SHORT).show();
+                    InputSpeech inputSpeech = new InputSpeech(MainActivity.this,getApplicationContext());
+                    inputSpeech.decodeCommand(result.get(0));
+                }
+                break;
+            }
+
         }
     }
 

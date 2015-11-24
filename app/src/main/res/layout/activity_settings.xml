@@ -12,6 +12,9 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
+        android:padding="10dp"
+        android:textSize="@dimen/abc_text_size_large_material"
+        android:textColor="#FFFFFF"
         android:text="@string/search_distance"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:textStyle="bold" />
@@ -31,6 +34,9 @@
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/searchdistance_radiogroup"
         android:text="@string/reports"
+        android:padding="10dp"
+        android:textSize="@dimen/abc_text_size_large_material"
+        android:textColor="#FFFFFF"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:textStyle="bold" />
 
