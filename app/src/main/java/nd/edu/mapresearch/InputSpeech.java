@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.gms.maps.model.Marker;
 
 /**
  * Created by victoriajohnston1 on 15/11/2015.
@@ -41,10 +42,6 @@ public class InputSpeech {
             Toast.makeText(context, context.getString(R.string.speech_not_supported),
                     Toast.LENGTH_SHORT).show();
         }
-
-    }
-
-    public void decodeCommand(String command){
 
     }
 }

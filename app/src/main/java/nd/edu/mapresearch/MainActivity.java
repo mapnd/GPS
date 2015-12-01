@@ -131,7 +131,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private double currentLongitude;//The current longitude of the user
     private Marker curSelectedMarker;//when a user clicks on a marker, this is it
     private LatLng currentPositionLagLng;//The current position of the user as a LatLng object
-    private boolean markerClicked;//Keeps track if a marker is clicked
+    public boolean markerClicked;//Keeps track if a marker is clicked
     private boolean polyLineDrawn;//Keeps track if a route(polyLine) is drawn
     public TextView distanceDuration;//This textview displays the distance and duration once a user chooses to m*mapap directions
     public TextView directions;//This textview displays the step by step directions during GPS mode
@@ -151,6 +151,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private boolean GPSzoom; //indicates whether gps mode is on
     private Menu menu;//the map's menu (settings)
     public Speech audio;//Speech class- used to say directions
+    private Button findButton;//find button on the mpa
+    private Button clearButton;//clear button on the map
+    private Button gatherLocations;//gather location button on the map
 
     //for use of timer, run parse query every 10 seconds, delay 1
     private final int DELAY_TIME = 10000;//delay 10 second
@@ -267,16 +270,16 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         turnSignal = (ImageView) findViewById(R.id.turn_signal);
         relativeDirections = (RelativeLayout) findViewById(R.id.RelativeLayoutDirections);
 
-        Button findButton = (Button)findViewById(R.id.find_btn);//button to execute find location
-        Button clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
-        Button mapDirButton = (Button)findViewById(R.id.map_directions_btn);//maps directions from current location to selected marker
-        Button gatherLocations = (Button)findViewById(R.id.query_btn);//maps directions from current location to selected marker
+        findButton = (Button)findViewById(R.id.find_btn);//button to execute find location
+        clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
+     //Button mapDirButton = (Button)findViewById(R.id.map_directions_btn);//maps directions from current location to selected marker
+        gatherLocations = (Button)findViewById(R.id.query_btn);//maps directions from current location to selected marker
         Button audioButton = (Button)findViewById(R.id.audio_button);//button which lets the user say a command
         //listeners for the respective buttons
         gatherLocations.setOnClickListener(gatherLocsButtonListener);
         findButton.setOnClickListener(findClickListener);
         clearButton.setOnClickListener(clearClickListener);
-        mapDirButton.setOnClickListener(mapDirClickListener);
+     //   mapDirButton.setOnClickListener(mapDirClickListener);
         audioButton.setOnClickListener(audioClickListener);
 
         listView = (ListView) findViewById(R.id.markersListView);
@@ -425,7 +428,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     };
 
     //when a marker is clicked and there is no line drawn, map draws the polyLine
-    private final OnClickListener mapDirClickListener = new OnClickListener() {
+ /*   private final OnClickListener mapDirClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
 
@@ -462,10 +465,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     mapDirections(currentPositionLagLng, curSelectedMarker);
                 }
 
-            }*/
+            }
 
         }
-    };
+    };*/
 
     private final OnClickListener audioClickListener = new OnClickListener() {
         @Override
@@ -1126,82 +1129,88 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 if(distanceBtCurA >= searchDistance){
                     //do nothing
                 }else{
-                    GridView gridView;
-                    LayoutInflater inflater = getLayoutInflater();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                    CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.reportDialog, Utils.imageID);
-                    gridView=new GridView(MainActivity.this);
-                    gridView.setAdapter(adapter);
-                    builder.setView(gridView);
-                    builder.setTitle("Reports");
-                    builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                        /* Exits the dialog */
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // do nothing besides exiting dialog
-                        }
-                    });
-                    builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            // Start the GPS function to this marker!
-                            // make dialog with how the user wants to get there, walking or driving
-                            final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
-                            final RadioButton walking = new RadioButton(MainActivity.this);
-                            final int walkingId = View.generateViewId();
-                            walking.setId(walkingId);
-                            walking.setText("Walking");
-                            RadioButton driving = new RadioButton(MainActivity.this);
-                            int drivingId = View.generateViewId();
-                            driving.setId(drivingId);
-                            driving.setText("Driving");
-                            radioGroup.addView(walking, 0);
-                            radioGroup.addView(driving, 1);
-
-                            final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
-                            gpsBuilder.setView(radioGroup);
-                            final Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
-                            gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    int id = radioGroup.getCheckedRadioButtonId();
-                                    if (id == walkingId) {
-                                        startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
-                                    } else {
-                                        startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
-                                    }
-                                }
-                            });
-                            gpsBuilder.show();
-
-                        }
-                    });
-                    final AlertDialog disDialog = builder.show();
-                    gridView.setOnItemClickListener(new OnItemClickListener() {
-
-                        @Override
-                        public void onItemClick(AdapterView<?> parent, View view,
-                                                int position, long id) {
-                            Toast.makeText(MainActivity.this, "You Clicked at " + Utils.reportDialog[+position], Toast.LENGTH_SHORT).show();
-                            if(Utils.reportDialog[+position].equals("Animals")){
-                                startAnimalDialog(a);
-                                disDialog.dismiss();
-                            }else if(Utils.reportDialog[+position].equals("Road Obstacles")){
-                                startRoadObstaclesDialog(a);
-                                disDialog.dismiss();
-                            }else if(Utils.reportDialog[+position].equals("Police")){
-                                startPoliceDialog(a);
-                                disDialog.dismiss();
-                            }
-                        }
-                    });
-
-
+                    createMarker(a);
                 }
 
 
             }
         });
+    }
+
+    /* Function created by Victoria Johnston
+    creates a marker at the LatLng location. It opens up a dialog for the user to choose what type of marker */
+    private void createMarker(final LatLng latLng){
+        final LatLng a = latLng;
+        GridView gridView;
+        LayoutInflater inflater = getLayoutInflater();
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.reportDialog, Utils.imageID);
+        gridView=new GridView(MainActivity.this);
+        gridView.setAdapter(adapter);
+        builder.setView(gridView);
+        builder.setTitle("Reports");
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            /* Exits the dialog */
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // do nothing besides exiting dialog
+            }
+        });
+        builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                // Start the GPS function to this marker!
+                // make dialog with how the user wants to get there, walking or driving
+                final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                final RadioButton walking = new RadioButton(MainActivity.this);
+                final int walkingId = View.generateViewId();
+                walking.setId(walkingId);
+                walking.setText("Walking");
+                RadioButton driving = new RadioButton(MainActivity.this);
+                int drivingId = View.generateViewId();
+                driving.setId(drivingId);
+                driving.setText("Driving");
+                radioGroup.addView(walking, 0);
+                radioGroup.addView(driving, 1);
+
+                final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
+                gpsBuilder.setView(radioGroup);
+                final Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
+                gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        int id = radioGroup.getCheckedRadioButtonId();
+                        if (id == walkingId) {
+                            startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
+                        } else {
+                            startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
+                        }
+                    }
+                });
+                gpsBuilder.show();
+
+            }
+        });
+        final AlertDialog disDialog = builder.show();
+        gridView.setOnItemClickListener(new OnItemClickListener() {
+
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                Toast.makeText(MainActivity.this, "You Clicked at " + Utils.reportDialog[+position], Toast.LENGTH_SHORT).show();
+                if(Utils.reportDialog[+position].equals("Animals")){
+                    startAnimalDialog(a);
+                    disDialog.dismiss();
+                }else if(Utils.reportDialog[+position].equals("Road Obstacles")){
+                    startRoadObstaclesDialog(a);
+                    disDialog.dismiss();
+                }else if(Utils.reportDialog[+position].equals("Police")){
+                    startPoliceDialog(a);
+                    disDialog.dismiss();
+                }
+            }
+        });
+
     }
 
     /*
@@ -2250,12 +2259,35 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     //txtSpeechInput.setText(result.get(0));
                     Toast.makeText(MainActivity.this,result.get(0), Toast.LENGTH_SHORT).show();
-                    InputSpeech inputSpeech = new InputSpeech(MainActivity.this,getApplicationContext());
-                    inputSpeech.decodeCommand(result.get(0));
+                    decodeCommand(result.get(0));
                 }
                 break;
             }
 
+        }
+    }
+
+    /* Victoria Johnston - function takes a string from voice control and analyzes it to perform actions in the app */
+    public void decodeCommand(String command){
+        command.toLowerCase();
+        if (command.contains("clear") && command.contains("screen")){
+            clearButton.performClick();
+        } else if ((command.contains("find")||command.contains("search")) && (command.contains("click") || command.contains("location"))) {
+            findButton.performClick();
+        } else if (command.contains("gather")) {
+            gatherLocations.performClick();
+        } else if (command.contains("marker")){
+            if (command.contains("animal")){
+                startAnimalDialog(currentPositionLagLng);
+            } else if (command.contains("police")){
+                startPoliceDialog(currentPositionLagLng);
+            } else if (command.contains("road")) {
+                startRoadObstaclesDialog(currentPositionLagLng);
+            } else if (command.contains("set")||command.contains("create")||command.contains("add")||command.contains("place")){
+                createMarker(currentPositionLagLng);
+            }
+        } else if (command.contains("menu") || command.contains("settings")){
+            openOptionsMenu();
         }
     }
 
