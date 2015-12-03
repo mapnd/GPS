@@ -48,20 +48,27 @@ public class Utils {
             "Traffic",
             "Building",
             "Tire",
-            "Rain",
-            "Truck Stopped"
+            "Tree",
+            "Truck Stopped",
+            "Help"
     };
 
     public static String[] reportDialog = {
             "Animals",
             "Road Obstacles",
-            "Police"
+            "Police",
+            "Accidents",
+            "Help",
+            "GPS"
     };
 
     public static int[] imageID = {
             R.mipmap.bear,
             R.mipmap.roadopstical,
-            R.mipmap.police
+            R.mipmap.police,
+            R.mipmap.minoraccident,
+            R.mipmap.help,
+            R.mipmap.gps
     };
 
     public static String[] animalDialog = {
@@ -78,20 +85,16 @@ public class Utils {
 
     public static String[] roadObstacleDialog = {
             "Construction",
-            "Major Accident",
-            "Minor Accident",
-            "Tire",
             "Traffic",
-            "Truck Stopped"
+            "Truck Stopped",
+            "Tree"
     };
 
     public static int[] roadObstacleImageID = {
             R.mipmap.construction,
-            R.mipmap.majoraccident,
-            R.mipmap.minoraccident,
-            R.mipmap.roadopstical,
             R.mipmap.traffic,
-            R.mipmap.truckstopped
+            R.mipmap.truckstopped,
+            R.mipmap.tree
     };
 
     public static String[] policeDialog = {
@@ -100,6 +103,18 @@ public class Utils {
     //Radar maybe
     public static int[] policeImageID = {
             R.mipmap.police
+    };
+
+    public static String[] accidentDialog = {
+            "Major Accident",
+            "Minor Accident",
+            "Tire"
+    };
+
+    public static int[] accidentImageID = {
+            R.mipmap.majoraccident,
+            R.mipmap.minoraccident,
+            R.mipmap.tire
     };
 
     /*

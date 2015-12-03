@@ -22,6 +22,8 @@ public class SettingsActivity extends Activity {
     private CheckBox animalChkBox;
     private CheckBox roadChkBox;
     private CheckBox policeChkBox;
+    private CheckBox accidentChkBox;
+    private CheckBox helpChkBox;
     private ArrayList<Float> availableOptions = new ArrayList<Float>();
 
     @Override
@@ -99,6 +101,28 @@ public class SettingsActivity extends Activity {
             @Override
             public void onClick(View v) {
                 editor.putBoolean("policeChkBox", policeChkBox.isChecked());
+//                Toast.makeText(getBaseContext(), "policeChkBox: " + policeChkBox.isChecked(), Toast.LENGTH_SHORT).show();
+                editor.commit();
+            }
+        });
+        accidentChkBox = (CheckBox) findViewById(R.id.reports_accidents);
+        accidentChkBox.setChecked(settings.getBoolean("accidentChkBox",false));
+        accidentChkBox.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                editor.putBoolean("accidentChkBox", accidentChkBox.isChecked());
+//                Toast.makeText(getBaseContext(), "policeChkBox: " + policeChkBox.isChecked(), Toast.LENGTH_SHORT).show();
+                editor.commit();
+            }
+        });
+        helpChkBox = (CheckBox) findViewById(R.id.reports_help);
+        helpChkBox.setChecked(settings.getBoolean("helpChkBox",false));
+        helpChkBox.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                editor.putBoolean("helpChkBox", helpChkBox.isChecked());
 //                Toast.makeText(getBaseContext(), "policeChkBox: " + policeChkBox.isChecked(), Toast.LENGTH_SHORT).show();
                 editor.commit();
             }

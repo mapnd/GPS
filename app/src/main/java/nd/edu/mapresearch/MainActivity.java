@@ -166,7 +166,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private boolean animalReports = true;
     private boolean roadObsReports = true;
     private boolean policeReports = true;
-
+    private boolean accidentReports = true;
+    private boolean helpReports = true;
 
 
     //location update
@@ -272,14 +273,12 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
         findButton = (Button)findViewById(R.id.find_btn);//button to execute find location
         clearButton = (Button)findViewById(R.id.clear_btn);//clears the map
-     //Button mapDirButton = (Button)findViewById(R.id.map_directions_btn);//maps directions from current location to selected marker
         gatherLocations = (Button)findViewById(R.id.query_btn);//maps directions from current location to selected marker
         Button audioButton = (Button)findViewById(R.id.audio_button);//button which lets the user say a command
         //listeners for the respective buttons
         gatherLocations.setOnClickListener(gatherLocsButtonListener);
         findButton.setOnClickListener(findClickListener);
         clearButton.setOnClickListener(clearClickListener);
-     //   mapDirButton.setOnClickListener(mapDirClickListener);
         audioButton.setOnClickListener(audioClickListener);
 
         listView = (ListView) findViewById(R.id.markersListView);
@@ -315,8 +314,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         animalReports = settingsBool.getBoolean("animalChkBox",false);
         roadObsReports = settingsBool.getBoolean("roadChkBox",false);
         policeReports = settingsBool.getBoolean("policeChkBox",false);
+        accidentReports = settingsBool.getBoolean("accidentChkBox",false);
+        helpReports = settingsBool.getBoolean("helpChkBox",false);
         //
-        clearMap();
+     //   clearMap();
         DoParseQuery();
         drawCircle();
         onResumeTimer = new Timer();
@@ -373,6 +374,8 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
     //Clears the map, and resets the booleans
     public void clearMap(){
+        relativeDirections.setVisibility(View.GONE);
+        distanceDuration.setText("");//clears distanceDuration Text
         mMap.clear();
         visibleMarkers.clear();
         eventsBeingDisplayed.clear();
@@ -385,6 +388,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         isGPSMode = false;
         idOfMarkerGps = "";
         GPSzoom = false;
+        drawCircle();
     }
 
 
@@ -427,49 +431,9 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     };
 
-    //when a marker is clicked and there is no line drawn, map draws the polyLine
- /*   private final OnClickListener mapDirClickListener = new OnClickListener() {
-        @Override
-        public void onClick(View v) {
-
-            /*if (isGPSMode) {
-                // Create a dialog to ask user if it wants to quit GPS navigation
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                TextView text = new TextView(MainActivity.this);
-
-                text.setText("Do you want to stop GPS navigation and trace rout to other marker?");
-                builder.setView(text);
-
-                builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        isGPSMode = false;
-                        navigator.stopGPS();
-                        idOfMarkerGps = "";
-                        mapDirections(currentPositionLagLng, curSelectedMarker);
-                    }
-                });
-
-                builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        //Do nothing
-                    }
-                });
-                builder.show();
-            } else {
-                if (markerClicked && !polyLineDrawn) {//if a marker is selected and no directions on map
-                    mapDirections(currentPositionLagLng, curSelectedMarker);
-                } else if (markerClicked && polyLineDrawn) {//if a marker is selected and directions on map, erase the old one
-                    mPolyline.remove();
-                    mapDirections(currentPositionLagLng, curSelectedMarker);
-                }
-
-            }
-
-        }
-    };*/
-
+    /* Victoria Johnston
+        Function that calls InputSpeech class to decode input speech from user
+     */
     private final OnClickListener audioClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -497,7 +461,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     };
 
-    //Method that changes map to specified tilt,zoom and bearing
+    //Victoria Johnston- Method that changes map to specified tilt,zoom and bearing
     public void setCamera(int t,int z,float b){
         CameraPosition cameraPosition = new CameraPosition.Builder().
                 target(currentPositionLagLng).
@@ -507,26 +471,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 build();
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
-
-    //Method that maps the directions (draws a polyline to the selected marker)
-    public void mapDirections(LatLng curSpot, Marker desSpot){
-
-        LatLng origin = curSpot;
-        LatLng dest = desSpot.getPosition();
-
-        if(origin!= null && dest != null){
-            // Getting URL to the Google Directions API
-            String url = makeDirectionsURL(origin, dest);
-            DownloadTask downloadTask = new DownloadTask();
-
-            // Start downloading json data from Google Directions API
-            downloadTask.execute(url);
-            markerClicked = false;
-            polyLineDrawn = true;
-        }
-
-    }
-
 
     /*
      *Victoria Johnston - Sets up the onClickMap Listener. Closes keyboard and menu when map is clicked
@@ -568,8 +512,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
     private final OnClickListener clearClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            relativeDirections.setVisibility(View.GONE);
-            distanceDuration.setText("");//clears distanceDuration Text
             clearMap();
         }
     };
@@ -1146,6 +1088,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.reportDialog, Utils.imageID);
         gridView=new GridView(MainActivity.this);
+        gridView.setNumColumns(2);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
         builder.setTitle("Reports");
@@ -1156,41 +1099,6 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 // do nothing besides exiting dialog
             }
         });
-        builder.setNeutralButton("GPS", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                // Start the GPS function to this marker!
-                // make dialog with how the user wants to get there, walking or driving
-                final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
-                final RadioButton walking = new RadioButton(MainActivity.this);
-                final int walkingId = View.generateViewId();
-                walking.setId(walkingId);
-                walking.setText("Walking");
-                RadioButton driving = new RadioButton(MainActivity.this);
-                int drivingId = View.generateViewId();
-                driving.setId(drivingId);
-                driving.setText("Driving");
-                radioGroup.addView(walking, 0);
-                radioGroup.addView(driving, 1);
-
-                final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
-                gpsBuilder.setView(radioGroup);
-                final Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
-                gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        int id = radioGroup.getCheckedRadioButtonId();
-                        if (id == walkingId) {
-                            startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
-                        } else {
-                            startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
-                        }
-                    }
-                });
-                gpsBuilder.show();
-
-            }
-        });
         final AlertDialog disDialog = builder.show();
         gridView.setOnItemClickListener(new OnItemClickListener() {
 
@@ -1198,15 +1106,50 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
                 Toast.makeText(MainActivity.this, "You Clicked at " + Utils.reportDialog[+position], Toast.LENGTH_SHORT).show();
-                if(Utils.reportDialog[+position].equals("Animals")){
+                if (Utils.reportDialog[+position].equals("Animals")) {
                     startAnimalDialog(a);
                     disDialog.dismiss();
-                }else if(Utils.reportDialog[+position].equals("Road Obstacles")){
+                } else if (Utils.reportDialog[+position].equals("Road Obstacles")) {
                     startRoadObstaclesDialog(a);
                     disDialog.dismiss();
-                }else if(Utils.reportDialog[+position].equals("Police")){
+                } else if (Utils.reportDialog[+position].equals("Police")) {
                     startPoliceDialog(a);
                     disDialog.dismiss();
+                }else if(Utils.reportDialog[+position].equals("Accidents")){
+                    startAccidentsDialog(a);
+                    disDialog.dismiss();
+                }else if(Utils.reportDialog[+position].equals("Help")){
+                    PlaceHelpMarker(a);
+                    disDialog.dismiss();
+                }else if(Utils.reportDialog[+position].equals("GPS")){
+                    disDialog.dismiss();
+                    final RadioGroup radioGroup = new RadioGroup(MainActivity.this);
+                    final RadioButton walking = new RadioButton(MainActivity.this);
+                    final int walkingId = View.generateViewId();
+                    walking.setId(walkingId);
+                    walking.setText("Walking");
+                    RadioButton driving = new RadioButton(MainActivity.this);
+                    int drivingId = View.generateViewId();
+                    driving.setId(drivingId);
+                    driving.setText("Driving");
+                    radioGroup.addView(walking, 0);
+                    radioGroup.addView(driving, 1);
+
+                    final AlertDialog.Builder gpsBuilder = new AlertDialog.Builder(MainActivity.this);
+                    gpsBuilder.setView(radioGroup);
+                    final Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
+                    gpsBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            int id = radioGroup.getCheckedRadioButtonId();
+                            if (id == walkingId) {
+                                startGPSNavigation(marker, GPSNavigator.WALKING_MODE);
+                            } else {
+                                startGPSNavigation(marker, GPSNavigator.DRIVING_MODE);
+                            }
+                        }
+                    });
+                    gpsBuilder.show();
                 }
             }
         });
@@ -1221,6 +1164,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.animalDialog, Utils.animalImageID);
         gridView=new GridView(this);
+        gridView.setNumColumns(2);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
         builder.setTitle("Animals");
@@ -1259,6 +1203,25 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
 
     }
 
+    /* Victoria Johnston
+        Method run when help dialog is chosen
+     */
+    private void PlaceHelpMarker(final LatLng a){
+        MarkerOptions marker = new MarkerOptions().position(a).title("Help");
+
+        iconOfOnLongClick = "Help";
+        String mDrawName = "help";
+        mDrawName = mDrawName.replaceAll("\\s","");
+        int resId = getResources().getIdentifier(mDrawName , "mipmap", getPackageName());
+        marker.icon(BitmapDescriptorFactory.fromResource(resId));
+
+        ParseGeoPoint point = new ParseGeoPoint(marker.getPosition().latitude,marker.getPosition().longitude);
+        userObject.put(Utils.PLACE_OBJECT_LOCATION, point);
+        userObject.put(Utils.PLACE_OBJECT_GROUP, "Help");
+        userObject.put(Utils.PLACE_OBJECT_ICON, iconOfOnLongClick);
+        setInfo(marker);
+    }
+
     /*
     Method run when road obstacle dialog is chosen
      */
@@ -1267,6 +1230,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.roadObstacleDialog, Utils.roadObstacleImageID);
         gridView=new GridView(this);
+        gridView.setNumColumns(2);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
         builder.setTitle("Road Obstacles");
@@ -1304,6 +1268,53 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         });
     }
 
+    /* Victoria Johnston
+        Method that runs when accident dialog is chosen
+     */
+
+    private void startAccidentsDialog(final LatLng a){
+        GridView gridView;
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.accidentDialog, Utils.accidentImageID);
+        gridView=new GridView(this);
+        gridView.setNumColumns(2);
+        gridView.setAdapter(adapter);
+        builder.setView(gridView);
+        builder.setTitle("Accidents");
+        builder.setNegativeButton("Cancel",
+                new DialogInterface.OnClickListener() {
+						/* Exits the dialog */
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing besides exiting dialog
+                    }
+                });
+        final AlertDialog disDialog = builder.show();
+        gridView.setOnItemClickListener(new OnItemClickListener() {
+
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MarkerOptions marker = new MarkerOptions().position(a).title("Accidents");
+                for (int i = 0; i < Utils.eventsPlotted.length; i++) {
+                    if (Utils.accidentDialog[+position].equals(Utils.eventsPlotted[i])) {
+                        iconOfOnLongClick = Utils.eventsPlotted[i].toString();
+                        String mDrawName = Utils.eventsPlotted[i].toString().toLowerCase();
+                        mDrawName = mDrawName.replaceAll("\\s", "");
+                        int resId = getResources().getIdentifier(mDrawName, "mipmap", getPackageName());
+                        marker.icon(BitmapDescriptorFactory.fromResource(resId));
+                    }
+                }
+                ParseGeoPoint point = new ParseGeoPoint(marker.getPosition().latitude, marker.getPosition().longitude);
+                userObject.put(Utils.PLACE_OBJECT_LOCATION, point);
+                userObject.put(Utils.PLACE_OBJECT_GROUP, "Accident");
+                userObject.put(Utils.PLACE_OBJECT_ICON, iconOfOnLongClick);
+                setInfo(marker);
+                disDialog.dismiss();
+            }
+        });
+    }
+
     /*
     Method run when police dialog is chosen
      */
@@ -1312,6 +1323,7 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         CustomGridViewAdapter adapter = new CustomGridViewAdapter(MainActivity.this, Utils.policeDialog, Utils.policeImageID);
         gridView=new GridView(this);
+        gridView.setNumColumns(2);
         gridView.setAdapter(adapter);
         builder.setView(gridView);
         builder.setTitle("Police");
@@ -2132,6 +2144,18 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                     }
                 }
             }
+            if(accidentReports){
+                for(int k = 0; k < Utils.accidentDialog.length; k++){
+                    if(icon.equals(Utils.accidentDialog[k])){
+                        Marker temp = mMap.addMarker(nearObject);
+                        visibleMarkers.put(event.getObjectId(), temp);
+                    }
+                }
+            }
+            if(helpReports){
+                Marker temp = mMap.addMarker(nearObject);
+                visibleMarkers.put(event.getObjectId(), temp);
+            }
         }
     }
 
@@ -2283,6 +2307,10 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 startPoliceDialog(currentPositionLagLng);
             } else if (command.contains("road")) {
                 startRoadObstaclesDialog(currentPositionLagLng);
+            } else if (command.contains("help")) {
+                PlaceHelpMarker(currentPositionLagLng);
+            } else if (command.contains("accident")) {
+                startAccidentsDialog(currentPositionLagLng);
             } else if (command.contains("set")||command.contains("create")||command.contains("add")||command.contains("place")){
                 createMarker(currentPositionLagLng);
             }

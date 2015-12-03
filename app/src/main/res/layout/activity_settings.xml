@@ -70,4 +70,24 @@
         android:layout_marginTop="10dp"
         android:text="Police" />
 
+    <CheckBox
+        android:id="@+id/reports_accidents"
+        android:checked="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/reports_police"
+        android:layout_marginTop="10dp"
+        android:text="Accidents" />
+
+    <CheckBox
+        android:id="@+id/reports_help"
+        android:checked="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/reports_accidents"
+        android:layout_marginTop="10dp"
+        android:text="Help" />
+
 </RelativeLayout>
