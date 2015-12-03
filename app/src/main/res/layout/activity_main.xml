@@ -84,13 +84,12 @@
             android:text="  " />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="800dp"
             android:layout_height="wrap_content"
             android:textSize="32sp"
-            android:gravity="center"
             android:layout_toRightOf="@+id/turn_signal"
             android:textColor="@color/background_material_dark"
-            android:layout_margin="10dp"
+            android:layout_margin="7dp"
             android:id="@+id/MainDirectionsTextView" />
 
        <Button
@@ -98,6 +97,7 @@
            android:layout_height="wrap_content"
            android:id="@+id/zoomDirectionsButton"
            android:gravity="center_vertical"
+           android:layout_margin="10dp"
            android:layout_toRightOf="@+id/MainDirectionsTextView"/>
 
     </RelativeLayout>

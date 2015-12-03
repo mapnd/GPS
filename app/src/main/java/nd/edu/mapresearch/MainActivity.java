@@ -748,11 +748,12 @@ public class MainActivity extends FragmentActivity implements GoogleApiClient.Co
                 gpsBuilder.show();
             }
         });
-        gpsDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            /* Exits the dialog */
+        gpsDialog.setPositiveButton("Create Marker", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                // do nothing besides exiting dialog
+                LatLng markerLocation = marker.getPosition();
+                createMarker(markerLocation);
+                marker.setVisible(false);
             }
         });
         gpsDialog.show();
